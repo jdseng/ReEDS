@@ -50,7 +50,7 @@ A step-by-step guide for getting started with ReEDS is available [here](https://
         2. Other commercial solvers have also been successfully applied to ReEDS, but setup details and some solver tuning are specific to the CPLEX solver.
 3. Install Julia: <https://julialang.org/downloads/>
 4. Open a command-line interface and set up your environments:
-    1. Clone the ReEDS repository: `git clone git@github.com:NatLabRockies/ReEDS-2.0.git` or `git clone https://github.com/NatLabRockies/ReEDS-2.0.git`
+    1. Clone the ReEDS repository: `git clone git@github.com:ReEDS-Model/ReEDS.git` or `git clone https://github.com/ReEDS-Model/ReEDS.git`
     2. Navigate to the cloned repository
     3. Create the `reeds2` [conda environment](https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html): `conda env create -f environment.yml`
         1. Linux and Mac users can use the environment.yml directly. Windows users need to comment out the `- julia=1.8` line from the environment.yml file before creating the environment and use the version of Julia installed above.
@@ -72,4 +72,4 @@ A step-by-step guide for getting started with ReEDS is available [here](https://
 
 ## Contact Us
 
-If you have comments and/or questions, you can contact the ReEDS team at [ReEDS.Inquiries@nlr.gov](mailto:ReEDS.Inquiries@nlr.gov) or post a question on the [discussion pages](https://github.com/NatLabRockies/ReEDS-2.0/discussions).
+If you have comments and/or questions, you can contact the ReEDS team at [ReEDS.Inquiries@nlr.gov](mailto:ReEDS.Inquiries@nlr.gov) or post a question on the [discussion pages](https://github.com/ReEDS-Model/ReEDS/discussions).

@@ -1,5 +1,5 @@
 # Getting Started 
-The ReEDS model source code is available at no cost from the National Laboratory of the Rockies (NLR). The ReEDS model can be downloaded or cloned from [https://github.com/NatLabRockies/ReEDS-2.0](https://github.com/NatLabRockies/ReEDS-2.0).
+The ReEDS model source code is available at no cost from the National Laboratory of the Rockies (NLR). The ReEDS model can be downloaded or cloned from [https://github.com/ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS).
 
 New users may also wish to start with some ReEDS training videos which are available on the [NLR YouTube channel](https://youtu.be/aGj3Jnspk9M?si=iqCRNn5MbGZc8ZIO).
 
@@ -153,7 +153,7 @@ Screenshot of a test of GAMS from the terminal window
 ```
 
 ### Repository Setup
-The ReEDS source code is hosted on GitHub: [https://github.com/NatLabRockies/ReEDS-2.0](https://github.com/NatLabRockies/ReEDS-2.0)
+The ReEDS source code is hosted on GitHub: [https://github.com/ReEDS-Model/ReEDS](https://github.com/ReEDS-Model/ReEDS)
 
 1. Install Git Large File Storage, instructions can be found here: [Installing Git Large File Storage](https://docs.github.com/en/repositories/working-with-files/managing-large-files/installing-git-large-file-storage)
 
