@@ -25,17 +25,15 @@ inputs_case = args.inputs_case
 
 # #%% Settings for testing ###
 # reeds_path = reeds.io.reeds_path
-# inputs_case = str(Path(reeds_path,'runs','v20260409_itlM0_WECC_county','inputs_case'))
+# inputs_case = str(Path(reeds_path,'runs','v20260407_transcostM0_Pacific','inputs_case'))
+
 
 #%%#################
 ### FIXED INPUTS ###
-
 decimals = 5
 drop_canmex = True
 dollar_year = 2004
-weight = 'cost'
 
-costcol = f'USD{dollar_year}perMW'
 
 #%% Set up logger
 log = reeds.log.makelog(
@@ -356,20 +354,11 @@ transfom_USDperMWmileyear = {
 transfom_USDperMWmileyear['B2B'] = transfom_USDperMWmileyear['AC']
 transfom_USDperMWmileyear['VSC'] = transfom_USDperMWmileyear['LCC']
 
-if trans_fom_region_mult:
-    ### Multiply line-specific $/MW by FOM fraction to get $/MW/year
-    transmission_line_fom = interface_params[costcol] * trans_fom_frac
-    ### Use regional average * distance_initial for existing lines
-    append = transmission_distance.loc[
-        transmission_distance.reset_index().trtype.isin(
-            ['AC','LCC','B2B','VSC']).set_axis(transmission_distance.index)
-    ]
-else:
-    ### Multiply $/MW/mile/year by distance [miles] to get $/MW/year for ALL lines
-    transmission_line_fom = (
-        transmission_distance.reset_index().trtype.map(transfom_USDperMWmileyear)
-        * transmission_distance.values
-    ).set_axis(transmission_distance.index).rename('USDperMWyear')
+### Multiply $/MW/mile/year by distance [miles] to get $/MW/year for ALL lines
+transmission_line_fom = (
+    transmission_distance.reset_index().trtype.map(transfom_USDperMWmileyear)
+    * transmission_distance.values
+).set_axis(transmission_distance.index).rename('USDperMWyear')
 
 
 #%%### Write files for ReEDS (adding * to make GAMS read column names as comment)

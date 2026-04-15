@@ -6,6 +6,8 @@
   The `osm_id` column gives the OpenStreetMap ID of the converter; for example, the "Miles City, MT" converter (with `osm_id = 137835349`) can be found at <https://www.openstreetmap.org/way/137835349>.
   This file is used to validate the interface-level B2B capacity for different spatial resolutions stored at `inputs/zones/{GSw_ZoneSet}/b2b.csv`.
 
+- `conductor_(ac|dc).csv`: Conductor and power rating assumptions for AC/DC transmission lines as a function of voltage from the MISO 2025 Transmission Cost Estimation Guide ([parent page](https://www.misoenergy.org/planning/transmission-planning/mtep), [description](https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP25337433.pdf), [data workbook](https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimate%20Workbook%20for%20MTEP25547535.xlsx))
+
 - `cost_hurdle_country.csv`: Hurdle rate for transmission flows [\$/MWh] between USA/Canada and USA/Mexico.
 
 - `cost_hurdle_intra.csv`: Hurdle rate for transmission flows [\$/MWh] between ReEDS spatial hierarchy levels.
@@ -36,22 +38,9 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
     reeds.inputs.get_itls(GSw_ZoneSet=GSw_ZoneSet)
     ```
 
-- `rev_transmission_basecost.csv`: Base transmission costs (before terrain multipliers) used in reV.
-Sources for numeric values are:
-  - TEPPC: <https://www.wecc.org/Administrative/TEPPC_TransCapCostCalculator_E3_2019_Update.xlsx>
-  - SCE: <http://www.caiso.com/Documents/SCE2019DraftPerUnitCostGuide.xlsx>
-  - MISO: <https://cdn.misoenergy.org/20190212%20PSC%20Item%2005a%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP%202019_for%20review317692.pdf>
-    - A more recent guide with a working link (as of 20230227) is available at <https://cdn.misoenergy.org/Transmission%20Cost%20Estimation%20Guide%20for%20MTEP22337433.pdf>.
-  - Southeast: Private communication with a representative Southeastern utility
-
 - `transmission_capacity_future_(ba|county)_baseline.csv` (DEPRECATED): Historically installed (since 2010) and currently planned transmission capacity additions at 134-zone resolution.
 To be replaced with ITL-based estimates of the impacts of planned tranches of transmission system additions.
 
 - `transmission_capacity_future_(ba|county)_{GSw_TransScen}.csv`: Available future routes for transmission capacity as specified by `GSw_TransScen`.
-
-- `transmission_cost_ac_500kv_(ba|county).csv` and `transmission_distance_(ba|county).csv`: Distance and cost for a representative transmission route between each pair of 134 US ReEDS zones, assuming a 500 kV single-circuit line.
-Routes are determined by the reV model using a least-cost-path algorithm accounting for terrain and land type multipliers.
-Costs represent the appropriate base cost from `rev_transmission_basecost.csv` multiplied by the appropriate terrain and land type multipliers for each 90m pixel crossed by the path.
-Endpoints are in inputs/shapefiles/transmission_endpoints and represent a point within the largest urban area in each of the 134 ReEDS zones.
 
 - `transmission_cost_dc_(ba|county).csv`: Same as `transmission_cost_ac_500kv_(ba|county).csv` except assuming a 500 kV bipole DC line.

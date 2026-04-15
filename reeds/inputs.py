@@ -483,15 +483,23 @@ def get_itl(r, rr, case=None, errors='raise', **kwargs) -> dict:
     return itl
 
 
-def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame:
+def get_interface_data(
+    case=None,
+    datafile='itl_NARIS.csv',
+    level:str='r',
+    errors='raise',
+    **kwargs,
+) -> pd.DataFrame:
     """
-    Get all the ITLs for the specified resolution. The resolution can be specified by:
+    Get all the transmission interface data for the specified resolution.
+    The resolution can be specified by:
         - Providing a path to a ReEDS run via `case`
         - Providing `GSw_ZoneSet` as a keyword argument
     If neither `case` nor `GSw_ZoneSet` are provided, the default resolution from
     `cases.csv` is used.
 
     Args:
+        datafile (str): 'itl_NARIS.csv' or 'transmission_cost_distance.csv'
         level (str): 'r' or 'transgrp'
 
     Inputs for testing:
@@ -500,22 +508,30 @@ def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame
         kwargs = {}
         errors = 'raise'
     """
+    ## Validate inputs
+    choices = ['itl_NARIS.csv', 'transmission_cost_distance.csv']
+    if datafile not in choices:
+        raise ValueError(f'datafile={datafile} but must be in {choices}')
+    datacols = {
+        'itl_NARIS.csv': ['MW_forward', 'MW_reverse'],
+        'transmission_cost_distance.csv': ['polarity', 'voltage', 'cost_MUSD', 'length_miles'],
+    }[datafile]
+    ## Get some settings
     sw = reeds.io.get_switches(case, **kwargs)
     inputs = Path(reeds.io.reeds_path, 'inputs')
-    ## Get the ITL config settings
     config = get_itl_config()
     hashfunc = config['hashfunc']
-    ## Get the ITLs for all interfaces
-    fpath = Path(inputs, 'transmission', 'itl_NARIS.csv')
-    itls = (
+    ## Get the data for all interfaces
+    fpath = Path(inputs, 'transmission', datafile)
+    dfin = (
         pd.read_csv(fpath)
         .rename(columns={
-            f'{hashfunc}_from':f'{hashfunc}_r',
-            f'{hashfunc}_to':f'{hashfunc}_rr',
+            f'{hashfunc}_from': 'start',
+            f'{hashfunc}_to': 'end',
         })
     )
-    if itls.index.duplicated().sum():
-        raise ValueError('Duplicate entries in ITL database')
+    if dfin.index.duplicated().sum():
+        raise ValueError(f'Duplicate entries in {datafile}')
     ### Get the zone hashes
     if level == 'r':
         ## We save the zonehash for level == 'r' directly for peace of mind
@@ -536,18 +552,18 @@ def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame
             )
             raise ValueError(err)
         zonehash = county2level.reset_index().groupby(level).FIPS.agg(hash_counties)
-    ### Get the ITLs
+    ### Get the data for the defined interfaces
     interfacepath = Path(inputs, 'zones', sw.GSw_ZoneSet, f'interfaces_{level}.csv')
     dfout = pd.read_csv(interfacepath)
-    for i, r in enumerate(['r', 'rr']):
+    for i, (r, side) in enumerate([('r', 'start'), ('rr', 'end')]):
         dfout[r] = dfout.interface.str.split(config['idelim']).str[i]
-        dfout[f'{hashfunc}_{r}'] = dfout[r].map(zonehash)
-    dfout = dfout.merge(itls, on=[f'{hashfunc}_r', f'{hashfunc}_rr'], how='left')
+        dfout[side] = dfout[r].map(zonehash)
+    dfout = dfout.merge(dfin, on=['start', 'end'], how='left')
     ### Make sure it worked
-    missing = dfout.loc[dfout.MW_forward.isnull() | dfout.MW_reverse.isnull()]
+    missing = dfout.loc[dfout[datacols].isnull().any(axis=1)]
     if len(missing):
         print(missing)
-        err = f'Missing ITL for {len(missing)} interfaces'
+        err = f'Missing data from {datafile} for {len(missing)} interfaces'
         if len(missing) <= 10:
             err += ': ' + (' '.join(missing.interface))
         if errors == 'raise':
@@ -555,6 +571,47 @@ def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame
         elif errors == 'warn':
             warn(err)
     return dfout.dropna()
+
+
+def get_itls(case=None, level:str='r', errors='raise', **kwargs) -> pd.DataFrame:
+    """
+    Get all the ITLs for the specified resolution using get_interface_data().
+    The resolution can be specified by:
+        - Providing a path to a ReEDS run via `case`
+        - Providing `GSw_ZoneSet` as a keyword argument
+    If neither `case` nore `GSw_ZoneSet` are provided, the default resolution from
+    `cases.csv` is used.
+
+    Args:
+        level (str): 'r' or 'transgrp'
+
+    Inputs for testing:
+        case = None
+        level = 'r'
+        kwargs = {}
+        errors = 'raise'
+    """
+    return get_interface_data(
+        case=case,
+        datafile='itl_NARIS.csv',
+        level=level,
+        errors=errors,
+        **kwargs,
+    )
+
+
+def get_distances(case=None, errors='raise', **kwargs) -> pd.DataFrame:
+    """
+    """
+    distances_land = get_interface_data(
+        case=case,
+        datafile='transmission_cost_distance.csv',
+        level='r',
+        errors=errors,
+        **kwargs,
+    )
+    ## TODO: Add offshore and onshore-to-offshore
+    return distances_land
 
 
 def get_zones(case=None, crs='ESRI:102008', **kwargs) -> gpd.GeoDataFrame:
