@@ -1216,12 +1216,17 @@ def write_batch_script(
         repo = git.Repo()
         try:
             branch = repo.active_branch.name
-            tag = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)[-1].name
-            description = repo.git.describe()
+            tags = sorted(repo.tags, key=lambda t: t.commit.committed_datetime)
+            if len(tags):
+                tag = tags[-1].name
+                description = repo.git.describe()
+            else:
+                tag = 'None'
+                description = 'None'
         except TypeError:
             branch = 'DETACHED_HEAD'
-            tag = ''
-            description = ''
+            tag = 'None'
+            description = 'None'
         text = f'{repo.git_dir},{branch},{repo.head.object.hexsha},{tag},{description}\n'
         loglines.append(text)
     except Exception:
