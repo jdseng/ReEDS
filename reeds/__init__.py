@@ -1,8 +1,3 @@
-## Turn off logging for imported packages
-import logging
-for i in ['matplotlib', 'fiona', 'h5py']:
-    logging.getLogger(i).setLevel(logging.WARNING)
-
 ## ReEDS submodules
 from . import checks as checks
 from . import financials as financials
