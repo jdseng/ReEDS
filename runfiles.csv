@@ -483,7 +483,7 @@ x_r.csv,,1,first,ignore,"*x,r",,,0,0,,1,,,,handled in writesupplycurves.py
 yearafter.csv,inputs/sets/yearafter.csv,1,ignore,ignore,,,,,,,,,yearafter,,
 inputs.gdx,,1,ignore,ignore,,,,,0,,,,,,
 plexos_inputs.gdx,,1,ignore,ignore,,,,,0,,,,,,
-load.h5,,1,sum,ignore,wide,"year,hour",,1,keepindex,,1,,,,Disaggregation handled in hourly_load.py
+load.h5,,1,ignore,ignore,wide,"year,hour",,1,keepindex,,1,,,,Disaggregation and aggregation handled in hourly_load.py
 recf.h5,,1,recf,ignore,wide,datetime,,1,keepindex,,1,,,,
 csp.h5,,1,csp,ignore,wide,datetime,,1,keepindex,,1,,,,
 gswitches.txt,,1,ignore,ignore,,,,,0,,,,,,
@@ -523,3 +523,4 @@ raw_value_streams.py,raw_value_streams.py,1,ignore,ignore,,,,,,,,,,,
 runbatch.py,runbatch.py,1,ignore,ignore,,,,,,,,,,,
 tc_phaseout.py,tc_phaseout.py,1,ignore,ignore,,,,,,,,,,,
 valuestreams.py,valuestreams.py,1,ignore,ignore,,,,,,,,,,,
+mcs_latin_hypercube_samples.csv,,0,ignore,ignore,,,,,,,,,,,
