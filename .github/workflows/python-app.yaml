@@ -178,6 +178,8 @@ jobs:
             inputs/remote/
             inputs/profiles_cf/
             inputs/profiles_demand/
+            inputs/profiles_dr/
+            inputs/profiles_temperature/
           key: zenodo-files-${{ steps.zenodo-files.outputs.files-hash }}-v1
           restore-keys: |
             zenodo-files-${{ steps.zenodo-files.outputs.files-hash }}-
