@@ -264,6 +264,30 @@ jobs:
             ${{ env.RUN_FOLDER }}/outputs/**/*.csv
             ${{ env.RUN_FOLDER }}/outputs/**/*.h5
 
+  run-R2X:
+    runs-on: ubuntu-latest
+    needs:
+      - run-ReEDS
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - scenario: github_Pacific
+            solve-year: 2029
+          - scenario: github_Everything
+            solve-year: 2060
+          - scenario: github_MA_county_CC
+            solve-year: 2026
+
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+      - name: Retrieve ReEDS runs for ${{ matrix.scenario }}
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
+        with:
+          name: ${{ matrix.scenario }}
+          path: ${{ format('{0}-{1}', matrix.scenario, matrix.solve-year) }}
       - name: R2X compatibility
         uses: ./.github/actions/r2x-check
         id: r2x-check
