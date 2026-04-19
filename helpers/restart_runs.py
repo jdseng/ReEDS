@@ -1,11 +1,13 @@
 #%% Imports
 import os
+import sys
 import shutil
 import subprocess
 import argparse
-import pandas as pd
 from glob import glob
-from runbatch import submit_slurm_parallel_jobs
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from runreeds import submit_slurm_parallel_jobs
 from runstatus import get_run_status
 
 #%% Argument inputs
@@ -19,6 +21,8 @@ parser.add_argument('--force', '-f', action='store_true',
                     help='Proceed without double-checking')
 parser.add_argument('--more_copyfiles', '-m', type=str, default='',
                     help=',-delimited list of additional files to copy from reeds_path')
+parser.add_argument('--copy_reeds', '-r', action='store_true',
+                    help='Copy the reeds/ model folder from the repo to the run')
 parser.add_argument('--include_finished', '-i', action='store_true',
                     help='Also restart finished runs (e.g. to redo postprocessing)')
 
@@ -28,6 +32,7 @@ copy_cplex = args.copy_cplex
 copy_srun_template = args.copy_srun_template
 force = args.force
 more_copyfiles = [i for i in args.more_copyfiles.split(',') if len(i)]
+copy_reeds = args.copy_reeds
 include_finished = args.include_finished
 
 # #%% Inputs for debugging
@@ -36,6 +41,7 @@ include_finished = args.include_finished
 # copy_srun_template = True
 # force = True
 # more_copyfiles = ['report.gms']
+# copy_reeds = False
 # include_finished = False
 
 ###### Procedure
@@ -93,6 +99,8 @@ for case in runs_failed:
     #%% Copy additional files if desired
     for f in more_copyfiles:
         shutil.copy(os.path.join(reeds_path,f), os.path.join(case,f))
+    if copy_reeds:
+        shutil.copytree(Path(reeds_path, 'reeds'), Path(case, 'reeds'), dirs_exist_ok=True)
 
     #%% Make a backup copy of the original bash and sbatch scripts
     callfile = os.path.join(case,f'call_{casename}.sh')

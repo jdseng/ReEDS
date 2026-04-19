@@ -231,7 +231,7 @@ interconnection_queues.csv,inputs/capacity_exogenous/interconnection_queues.csv,
 itc_energy_comm_bonus.csv,,1,mean,ignore,r,*i,,0,0,,1,,,,
 itc_frac_monetized.csv,,1,ignore,ignore,,,,,0,,,,,,
 itc_fractions.csv,,1,ignore,ignore,,"i,country,t",,0,0,,,,,,
-ivt.csv,,1,ignore,ignore,,,,,0,,,,,,created in run.py
+ivt.csv,,1,ignore,ignore,,,,,0,,,,,,created in runreeds.py
 ivt_step.csv,,1,ignore,ignore,,,,,0,,,,,,
 lcclike.csv,inputs/sets/lcclike.csv,1,ignore,ignore,,,,,0,,,,lcclike,,
 load_2010.csv,,1,sum,ignore,r,wide,,1,0,,1,,,,disaggfunc set to ignore because load will already be in correct spatial resolution
@@ -490,4 +490,4 @@ scalars.txt,,1,ignore,ignore,,,,,0,,,,,,
 Project.toml,Project.toml,1,ignore,ignore,,,,,,,,,,,
 gamslice.txt,gamslice.txt,0,ignore,ignore,,,,,,,,,,,
 max_hintage_number.txt,,1,ignore,ignore,,,,,0,,,,,,
-run.py,run.py,1,ignore,ignore,,,,,,,,,,,
+runreeds.py,runreeds.py,1,ignore,ignore,,,,,,,,,,,

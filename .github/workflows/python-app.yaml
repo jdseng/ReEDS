@@ -230,7 +230,7 @@ jobs:
         env:
           SCENARIO: ${{ matrix.scenario }}
         run: |
-          python run.py -b "$batch" -c test -s "$SCENARIO"
+          python runreeds.py -b "$batch" -c test -s "$SCENARIO"
           echo "RUN_FOLDER=$GITHUB_WORKSPACE/runs/${batch}_${SCENARIO}" >> "$GITHUB_ENV"
 
       - name: Print GAMS log

@@ -426,7 +426,7 @@ def get_dist_instructions(reeds_path: str, inputs_case: str, run_ReEDS: bool = T
     mcs_dist_groups = sw['MCS_dist_groups'].split('.')
 
     if not run_ReEDS:
-        # Since you did not run using run.py - check inputs here
+        # Since you did not run using runreeds.py - check inputs here
         general_mcs_dist_validation(reeds_path, mcs_dist_path, sw)
 
     # Ignore all cases not in mcs_dist_groups

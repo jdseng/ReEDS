@@ -63,7 +63,7 @@ alias(dummy,adummy) ;
 
 * Following are scalars used to turn on or off various components of the model.
 * For binary switches, [0] is off and [1] is on.
-* These switches are generated from the cases file in run.py.
+* These switches are generated from the cases file in runreeds.py.
 $include inputs_case%ds%gswitches.txt
 
 * Extra switches that are defined based on other switches
@@ -91,7 +91,7 @@ scalar retireyear  "first year to allow capacity to start retiring" /%GSw_Retire
        upgradeyear "first year to allow capacity to upgrade"        /%GSw_Upgradeyear%/
        climateyear "first year to apply climate impacts"            /%GSw_ClimateStartYear%/ ;
 
-*** Scalars: copied from inputs/scalars.csv to inputs_case/scalars.txt in run.py
+*** Scalars: copied from inputs/scalars.csv to inputs_case/scalars.txt in runreeds.py
 $include inputs_case%ds%scalars.txt
 
 *==========================

@@ -1618,7 +1618,7 @@ def main(reeds_path, inputs_case):
     write_GAMS_sets(runfiles, reeds_path, inputs_case)
 
     # Rewrite the switches tables as GAMS-readable definition
-    # (gswitches.csv is first written at run.py)
+    # (gswitches.csv is first written at runreeds.py)
     scalar_csv_to_txt(os.path.join(inputs_case,'gswitches.csv'))
     
     source_deflator_map = get_source_deflator_map(reeds_path)

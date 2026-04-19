@@ -338,12 +338,12 @@ def parse_cases(
     return dfcases_out
 
 
-def get_optfile(case=None):
+def get_optfile(case=None, **kwargs):
     """
     Get the name of the optfile used by GAMS, formatted as described by
     https://gams.com/49/docs/UG_GamsCall.html#GAMSAOoptfile
     """
-    sw = reeds.io.get_switches(case)
+    sw = reeds.io.get_switches(case, **kwargs)
     GSw_gopt = int(sw.GSw_gopt)
     if GSw_gopt == 1:
         suffix = 'opt'

@@ -629,7 +629,7 @@ Additionally, if you want to re-run a given scenario without having to run all o
 * To avoid the prompts when kicking off a run, you can use the command line arguments: 
    * The following example runs the scenarios in cases_test.csv with the batch name '20240717_test'. The '-r -1' means that all cases will run simultaneously.  
    ```
-   python run.py -c test -b 20240717_test -r -1
+   python runreeds.py -c test -b 20240717_test -r -1
    ```
     * All options for command line arguments that can be used: 
         | Flag | |
