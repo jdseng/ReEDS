@@ -491,7 +491,7 @@ def read_output(
         except KeyError:
             ## Empty dataframes aren't written to h5 file, so make one ourselves
             report_params = pd.read_csv(
-                os.path.join(case, 'autocode', 'report_params.csv'),
+                os.path.join(case, 'reeds', 'core', 'terminus', 'report_params.csv'),
                 comment='#',
             )
             _index = report_params.loc[

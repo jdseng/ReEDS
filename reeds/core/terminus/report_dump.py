@@ -258,7 +258,7 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
 
     ### Get new file names if applicable
     dfparams = pd.read_csv(
-        os.path.join(case, 'autocode', 'report_params.csv'),
+        os.path.join(case, 'reeds', 'core', 'terminus', 'report_params.csv'),
         comment="#",
         index_col="param",
     )

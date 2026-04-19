@@ -1300,7 +1300,12 @@ def write_miscellaneous_files(
     Many of these files are not in the non_region_files and region_files set
     (runfiles.csv - from function read_runfiles).
     """
-    # ---- Miscellaneous files not in non_region_files or region_files ----
+    ### Solver file
+    case = Path(inputs_case).parent
+    optfile = reeds.inputs.get_optfile(case)
+    shutil.copy(Path(reeds_path, 'reeds', 'solver', optfile), case)
+
+    ### Parsed switches
     pd.DataFrame(
         {'*pvb_type': [f'pvb{i}' for i in sw['GSw_PVB_Types'].split('_')],
         'ilr': [np.around(float(c) / 100, 2) for c in sw['GSw_PVB_ILR'].split('_')

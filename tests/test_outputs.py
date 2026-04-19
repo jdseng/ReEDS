@@ -6,7 +6,7 @@ import reeds
 
 def test_output_files(casepath):
     outputs_folder = os.path.join(casepath, 'outputs')
-    report_params_path = os.path.join(casepath, 'autocode', 'report_params.csv')
+    report_params_path = os.path.join(casepath, 'reeds', 'core', 'terminus', 'report_params.csv')
     lastyear = reeds.io.get_years(casepath)[-1]
 
     # each parameter in report_params.csv should be associated with an output csv file
