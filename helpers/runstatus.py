@@ -130,7 +130,7 @@ if __name__ == '__main__':
                     try:
                         lastfile = lstfiles[-1]
                     except IndexError:
-                        print(f"{case:<{longest}}: failed in input processing")
+                        print(f"{case:<{longest}}: failed in input_processing")
                         print_log_if_verbose(fullcase, verbose)
                         continue
                     try:

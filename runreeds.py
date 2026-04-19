@@ -1259,7 +1259,7 @@ def write_batch_script(
             OPATH.writelines("conda activate reeds2 \n")
             OPATH.writelines('export R_LIBS_USER="$HOME/rlib" \n\n\n')
 
-        #%% Write the input processing script calls
+        #%% Write the input_processing script calls
         big_comment('Input processing', OPATH)
         for s in [
             'copy_files',

@@ -29,7 +29,7 @@ file_levels = {
         ## All the other outputs/*.csv files are duplicates of data in outputs.h5.
         os.path.join('outputs', r'^((?!(neue|health|h2_price_month)).)*csv$'),
     ],
-    ## Large input files. Would need to rerun input processing to recreate.
+    ## Large input files. Would need to rerun input_processing to recreate.
     2: [
         os.path.join('inputs_case', 'inputs.gdx'),
         os.path.join('inputs_case', 'unitdata.csv'),
