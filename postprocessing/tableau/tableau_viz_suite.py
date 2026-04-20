@@ -21,11 +21,6 @@ pd.options.display.max_columns = 200
 
 import warnings
 warnings.filterwarnings("ignore")
-## trying to get rid of the Fiona messages whenever I read in the .gpkg file
-import logging
-# Set the logging level for Fiona to WARNING or ERROR
-logging.getLogger("fiona").setLevel(logging.WARNING)
-logging.disable(logging.CRITICAL)
 
 ### Local imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
@@ -34,9 +29,6 @@ from reeds import plots
 plots.plotparams()
 from reeds import reedsplots
 
-## read in bokeh functionality
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..','postprocessing/bokehpivot')))
-import reeds2
 
 #%%### GENERAL FUNCTIONS
 
@@ -446,7 +438,7 @@ def calc_peakload(
     df = pd.concat(dictout.values(), axis=0, ignore_index=True) 
 
     # # convert MW to GW for national data
-    df = reeds2.scale_column(df,**{'scale_factor': 1e-3, 'column':'Value'})
+    df = reeds.output_calc.scale_column(df,**{'scale_factor': 1e-3, 'column':'Value'})
 
     return df
 
@@ -497,7 +489,7 @@ def calc_transmission_map(case,level='transgrp'):
     trans_total_new = pd.concat([trans_total_new, tran_new], axis=0)
 
     # convert MW to GW
-    trans_total_new = reeds2.scale_column(trans_total_new,**{'scale_factor': 1e-3, 'column':'Value'})   
+    trans_total_new = reeds.output_calc.scale_column(trans_total_new,**{'scale_factor': 1e-3, 'column':'Value'})   
 
     return trans_total_new
     
