@@ -208,6 +208,11 @@ function run_pras(pras_system_path::String, args::Dict)
     @info "$(PRAS.EUE(results["short"])) MWh"
     @info "NEUE = $(1e6 * PRAS.EUE(results["short"]).eue.estimate / sum(sys.regions.load)) ppm"
 
+    # CVAR results
+    _,_,_,_,energyunit = get_params(sys)
+    alpha = 0.95
+    @info (PRAS.CVAR(energyunit, results["short_samples"], alpha))
+
     ## Filter out DC regions used for VSC HVDC transmission
     regions = [r for r in sys.regions.names if !(occursin("|", r))]
 
