@@ -101,7 +101,7 @@ We use the `mscorefonts` package to get nicer-looking fonts in plots.
 If you had `matplotlib` installed before running a script from the `reeds2` environment,
 you might need to clear your fonts cache (you can back it up first if you like).
 
-- On Mac/Linux, try deleting `~/.cahce/matplotlib` or `~/.matlotlib`
+- On Mac/Linux, try deleting `~/.cache/matplotlib` or `~/.matplotlib`
 - On Windows, try deleting `%HOMEPATH%\.matplotlib`
 
 
