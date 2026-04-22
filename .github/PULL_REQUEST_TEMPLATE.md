@@ -40,7 +40,7 @@ Include additional illustrative plots describing input data, methods, testing, a
 
 ### Details to double-check
 <!-- Delete or ~~strikethrough~~ if not relevant for this PR -->
-- [ ] Charge code sent reviewer
+- [ ] Charge code sent to reviewer
 - [ ] Included comparison reports for appropriate test cases
 - [ ] Documentation updated if necessary
   <!--
