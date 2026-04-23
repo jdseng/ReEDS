@@ -1235,13 +1235,12 @@ def write_batch_script(
     modeledyears = os.path.join('inputs_case','modeledyears.csv')
     toLogGamsString = ' logOption=4 logFile=gamslog.txt appendLog=1 '
 
-    ## Copy code folders
-    for dirname in ['reeds']:
-        shutil.copytree(
-            os.path.join(reeds_path, dirname),
-            os.path.join(casedir, dirname),
-            ignore=shutil.ignore_patterns('test'),
-        )
+    ## Copy code folder
+    shutil.copytree(
+        os.path.join(reeds_path, 'reeds'),
+        os.path.join(casedir, 'reeds'),
+        ignore=shutil.ignore_patterns('test'),
+    )
 
     #make the reeds_data folder
     os.makedirs(os.path.join(casedir,'handoff','reeds_data'), exist_ok=True)

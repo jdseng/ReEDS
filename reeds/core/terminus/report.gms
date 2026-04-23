@@ -2077,7 +2077,7 @@ h2_usage(r,h,t)$tmodel_new(t) =
 *========================================
 
 $ifthene.powerfrac %GSw_calc_powfrac% == 1
-$include reeds%ds%core%ds%terminus%ds%e_powfrac_calc.gms
+$include reeds%ds%core%ds%terminus%ds%powfrac_calc.gms
 $endif.powerfrac
 
 *========================================
