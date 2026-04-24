@@ -1,10 +1,14 @@
 #%% Imports
 import os
 import re
+import sys
 import datetime
 import subprocess
 import argparse
 from glob import glob
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+import reeds
 
 # #%% Inputs for debugging
 # batch_name = 'v20250812_mcK0'
@@ -91,11 +95,8 @@ if __name__ == '__main__':
     include_finished = args.include_finished
     verbose = args.verbose
 
-    #%% Shared parameters
-    reeds_path = os.path.dirname(os.path.abspath(__file__))
-    dictruns = get_run_status(reeds_path, batch_name)
-
     #%%### Loop through categories and runs and report their status
+    dictruns = get_run_status(reeds.io.reeds_path, batch_name)
     for key, runs in dictruns.items():
         text = f'{key}: {len(runs)}'
         print(f"\n{text}\n{'-'*len(text)}")

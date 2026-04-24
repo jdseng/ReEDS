@@ -717,10 +717,15 @@ def get_switches(case=None, **kwargs):
         int(y) for y in sw.get('GSw_FutureHydCF_RepYears', _fallback).split('_')
     ]
     ## Get number of threads to use in PRAS
+    ## (read from case folder; fall back to repo if case folder doesn't exist yet)
     opt_file = get_optfile(case)
-    fpath_opt = Path(case, opt_file)
-    if not fpath_opt.is_file():
-        fpath_opt = Path(reeds_path, 'reeds', 'solver', opt_file)
+    fpath_repo = Path(reeds_path, 'reeds', 'solver', opt_file)
+    if case is None:
+        fpath_opt = fpath_repo
+    else:
+        fpath_opt = Path(case, opt_file)
+        if not fpath_opt.is_file():
+            fpath_opt = fpath_repo
     threads = get_param_value(fpath_opt, "threads", dtype=int)
     sw['threads'] = threads
     ## Determine whether run is on HPC
