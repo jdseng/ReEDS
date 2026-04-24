@@ -139,27 +139,6 @@ $include inputs_case%ds%ccreg.csv
 $onlisting
 / ;
 
-set eall "emission categories used in reporting"
-/
-$offlisting
-$include inputs_case%ds%eall.csv
-$onlisting
-/ ;
-
-set e(eall) "emission categories used in model"
-/
-$offlisting
-$include inputs_case%ds%e.csv
-$onlisting
-/ ;
-
-set etype "emission types used in model (upstream and process)"
-/
-$offlisting
-$include inputs_case%ds%etype.csv
-$onlisting
-/ ;
-
 Sets
 nercr "NERC regions"
 * https://www.nerc.com/pa/RAPA/ra/Reliability%20Assessments%20DL/NERC_LTRA_2021.pdf
@@ -232,8 +211,8 @@ $include inputs_case%ds%val_hurdlereg.csv
 /
 ;
 
-* Written by copy_files.py
-$include b_sets.gms
+* Written by h5_to_gdx.py
+$declareAndLoad inputs_case%ds%inputs_0.gdx
 
 sets
 *The following two sets:
@@ -300,15 +279,6 @@ $endif.hydup2
   / ;
 
 alias(i,ii,iii) ;
-
-set i_water_nocooling(i) "technologies that use water, but are not differentiated by cooling tech and water source"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%i_water_nocooling.csv
-$offdelim
-$onlisting
-/ ;
 
 set i_water_cooling(i) "derived technologies from original technologies with cooling technologies other than just none",
 *Hereafter numeraire techs in cooling-water context mean original technologies,
@@ -389,22 +359,6 @@ $include inputs_case%ds%cost_vom_mult.csv
 $offdelim
 $onlisting
 ;
-
-set allt "all potential years"
-/
-$offlisting
-$include inputs_case%ds%allt.csv
-$onlisting
-/ ;
-
-set i_geotech(i,geotech) "crosswalk between an individual geothermal technology and its category"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%i_geotech.csv
-$offdelim
-$onlisting
-/ ;
 
 set
 *technology-specific subsets
@@ -511,29 +465,10 @@ newv(v) "new tech set" /new1*new%numclass%/
 
 ;
 
-* DAC == direct air capture
-* H2 == hydrogen
-* Note: no longer tracking H2 by color. This means ReEDS internalizes
-* emissions for any H2 produced for non-power sector demands
-set p "products produced"
-/
-$offlisting
-$include inputs_case%ds%p.csv
-$onlisting
-/ ;
-
-
 hyd_add_pump('hydED_pumped-hydro') = yes ;
 hyd_add_pump('hydED_pumped-hydro-flex') = yes ;
 
 * Sets involved with resource supply curve definitions
-set sc_cat "supply curve categories (capacity and cost)"
-/
-$offlisting
-$include inputs_case%ds%sc_cat.csv
-$onlisting
-/ ;
-
 set rscbin "Resource supply curves bins" /bin1*bin%numbins%/,
     rscfeas(i,r,rscbin) "feasibility set for technologies that have resource supply curves" ;
 
@@ -577,16 +512,6 @@ $offdelim
 $onlisting
 / ;
 
-*various parameters needed for Present Value Factor (PVF) calculations before solving
-*specifically these are used in the aggregating of the PVF of
-*onm and capital when years are skipped
-set yearafter "set to loop over for the final year calculation"
-/
-$offlisting
-$include inputs_case%ds%yearafter.csv
-$onlisting
-/ ;
-
 * --- Upgrade link definitions ---
 Set upgrade_to(i,ii)         "mapping set that allows for i to be upgraded to ii"
     upgrade_from(i,ii)       "mapping set that allows for i to be upgraded from ii"
@@ -605,15 +530,6 @@ $onlisting
 upgrade(i)$[sum{(ii,iii), upgrade_link(i,ii,iii) }] = yes ;
 upgrade_to(i,ii)$[sum{iii, upgrade_link(i,iii,ii) }] = yes ;
 upgrade_from(i,ii)$[sum{iii, upgrade_link(i,ii,iii) }] = yes ;
-
-set unitspec_upgrades(i) "upgraded technologies that get unit-specific characteristics"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%unitspec_upgrades.csv
-$offdelim
-$onlisting
-/ ;
 
 unitspec_upgrades(i)$[sum{ii$ctt_i_ii(i,ii), unitspec_upgrades(ii) }$Sw_WaterMain] =
   sum{ii$ctt_i_ii(i,ii), unitspec_upgrades(ii) } ;
@@ -873,13 +789,6 @@ $ifthen.naris %GSw_Region% == "naris"
   ban(i)$i_subsets(i,'canada') = yes ;
 $endif.naris
 
-* Ban DUPV, CSP, and Geothermal resources that do not remain after aggregation
-set resourceclass "renewable resource classes"
-/
-$offlisting
-$include inputs_case%ds%resourceclass.csv
-$onlisting
-/ ;
 parameter resourceclassnum(resourceclass) "numeric value for resource class" ;
 resourceclassnum(resourceclass) = resourceclass.val ;
 set tech_resourceclass(i,resourceclass) "map from CSP/DUPV techs to resource classes"
@@ -1042,47 +951,8 @@ tg_i('biomass',i)$bio(i) = yes ;
 tg_i('pumped-hydro',i)$psh(i) = yes ;
 tg_i('dr_shed',i)$dr_shed(i) = yes ;
 
-*Hybrid pv+battery (PVB) configurations are defined by:
-*  (1) inverter loading ratio (DC/AC) and
-*  (2) battery capacity ratio (Battery/PV Array)
-*Each configuration has ten resource classes
-*The PV portion refers to "UPV", but not "DUPV"
-*The battery portion refers to "battery_li"
-set pvb_config "set of hybrid pv+battery configurations"
-/
-$offlisting
-$include inputs_case%ds%pvb_config.csv
-$onlisting
-/ ;
-
-set pvb_agg(pvb_config,i) "crosswalk between hybrid pv+battery configurations and technology options"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%pvb_agg.csv
-$offdelim
-$onlisting
-/ ;
-
 *add non-numeraire CSPs in index i of already defined set tg_i(tg,i)
 tg_i("csp",i)$[(csp1(i) or csp2(i) or csp3(i) or csp4(i))$Sw_WaterMain] = yes ;
-
-*Offhsore wind turbine types
-set ofstype "offshore types used in offshore requirement constraint (eq_RPS_OFSWind)"
-/
-$offlisting
-$include inputs_case%ds%ofstype.csv
-$onlisting
-/ ;
-
-set ofstype_i(ofstype,i) "crosswalk between ofstype and i"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%ofstype_i.csv
-$offdelim
-$onlisting
-/ ;
 
 storage_interday(i)$(Sw_InterDayLinkage = 0) = no ;
 
@@ -1176,15 +1046,6 @@ $onlisting
  / ;
 
 
-set prescriptivelink0(pcat,ii) "initial set of prescribed categories and their technologies - used in assigning prescribed builds"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%prescriptivelink0.csv
-$offdelim
-$onlisting
-/ ;
-
 *include non-numeraire CSPs and then exclude numeraire CSPs in ii dimension of
 *prescriptivelink0(pcat,ii) set when Sw_WaterMain is ON
 prescriptivelink0("csp-ws",ii)$[(csp1(ii) or csp2(ii) or csp3(ii) or csp4(ii))$Sw_WaterMain] = yes ;
@@ -1208,15 +1069,6 @@ prescriptivelink(pcat,i)$[geo_extra(i)] = no ;
 prescriptivelink(pcat,i)$[upgrade(i)] = no ;
 
 set rsc_agg(i,ii)   "rsc technologies that belong to the same class" ;
-
-set tg_rsc_cspagg(i,ii) "csp technologies that belong to the same class"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%tg_rsc_cspagg.csv
-$offdelim
-$onlisting
-/ ;
 
 set tg_rsc_cspagg_tmp(i,ii) "expanded tg_rsc_cspagg(i,ii) to include new non-numeraire CSP techs" ;
 
@@ -1247,15 +1099,6 @@ Replicating the construct for CSP to link Hybrid PV+battery and UPV for the reso
   Because the first index of rsc_agg is only a UPV technology the above constraint will never be generated when "i" is a pvb(i).
 $offtext
 
-set tg_rsc_upvagg(i,ii) "pv and pvb technologies that belong to the same class"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%tg_rsc_upvagg.csv
-$offdelim
-$onlisting
-/ ;
-
 *initialize rsc aggregation set for 'i'='ii'
 *rsc_agg(i,ii)$[sameas(i,ii)$(not csp(i))$(not csp(ii))$rsc_i(i)$rsc_i(ii)] = yes ;
 rsc_agg(i,ii)$[sameas(i,ii)$rsc_i(i)$rsc_i(ii)] = yes ;
@@ -1267,19 +1110,8 @@ rsc_agg(i,ii)$tg_rsc_upvagg(i,ii) = yes ;
 rsc_agg('pumped-hydro',ii)$psh(ii) = yes ;
 rsc_agg(i,ii)$[ban(i) or ban(ii)] = no ;
 
-*============================
-* -- Demand flexibility setup --
-*============================
-
-set flex_type "set of demand flexibility types: daily, previous, next, adjacent"
-/
-$offlisting
-$include inputs_case%ds%flex_type.csv
-$onlisting
-/ ;
-
 *======================================
-*     --- Begin hierarchy ---
+*     --- Region hierarchy ---
 *======================================
 
 set hierarchy(r,nercr,transreg,transgrp,cendiv,st,interconnect,country,usda_region,h2ptcreg,hurdlereg,ccreg) "hierarchy of various regional definitions"
@@ -1743,13 +1575,6 @@ forced_retire(i,r,t)$[sum{st$r_st(r,st), (yeart(t)>=forced_retirements(i,st))$fo
 * upgrade tech in forced_retire
 forced_retire(i,r,t)$[upgrade(i)$(sum{ii$upgrade_to(i,ii), forced_retire(ii,r,t) })] = yes ;
 
-set hintage_char "characteristics available in hintage_data"
-/
-$offlisting
-$include inputs_case%ds%hintage_char.csv
-$onlisting
-/ ;
-
 *created by /input_processing/writehintage.py
 table hintage_data(i,v,r,allt,hintage_char) "table of existing unit characteristics written by writehintage.py"
 $offlisting
@@ -1764,15 +1589,6 @@ if((not Sw_UpgradeHeatRateAdj),
   hintage_data(i,initv,r,t,"wCCS_Retro_HR")$hintage_data(i,initv,r,t,"wCCS_Retro_HR")
           = hintage_data(i,initv,r,t,"wHR") ;
 ) ;
-
-set upgrade_hintage_char(hintage_char) "sets to operate over in extension of hintage_data characteristics when sw_upgrades = 1"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%upgrade_hintage_char.csv
-$offdelim
-$onlisting
-/ ;
 
 * need to extend characteristics for years where a tech could still exist if it was upgraded in a previous year
 * - ie a hintages characteristics would need to persist if it is upgraded and has a lifetime extension
@@ -2785,15 +2601,6 @@ h2_ptc_years(t) = tmodel_new(t)$[sum{(i,v,r),h2_ptc(i,v,r,t)}];
 * --- Parameters for water constraints ---
 *==========================================
 
-set sw(wst) "surface water types where access is based on consumption not withdrawal"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%sw.csv
-$offdelim
-$onlisting
-/ ;
-
 set i_water_surf(i) "subset of technologies that uses surface water",
   i_w(i,w) "linking set between technology and water use type used in constraining water availability" ;
 
@@ -2892,13 +2699,6 @@ $onlisting
 / ;
 $offempty
 
-set climate_param "parameters defined in climate_heuristics_finalyear"
-/
-$offlisting
-$include inputs_case%ds%climate_param.csv
-$onlisting
-/ ;
-
 parameter climate_heuristics_finalyear(climate_param) "--fraction-- climate heuristic adjustment in final year"
 $onempty
 /
@@ -2920,13 +2720,6 @@ hydro_capcredit_delta(i,t)$hydro_d(i) =
 *====================================
 *         --- RPS data ---
 *====================================
-
-set RPSCat "RPS constraint categories, including clean energy standards"
-/
-$offlisting
-$include inputs_case%ds%RPSCat.csv
-$onlisting
-/ ;
 
 set RPSCat_i(RPSCat,i,st)     "mapping between rps category and technologies for each state",
     RecMap(i,RPSCat,st,ast,t) "Mapping set for technologies to RPS categories and indicates if credits can be sent from st to ast",
@@ -3247,21 +3040,7 @@ nat_gen_tech_frac(i)$[i_water_cooling(i)$Sw_WaterMain] = sum{ii$ctt_i_ii(i,ii), 
 
 * a CSAPR budget indicates the cap for trading whereas
 * assurance indicates the maximum amount a state can emit regardless of trading
-set csapr_cat "CSAPR regulation categories"
-/
-$offlisting
-$include inputs_case%ds%csapr_cat.csv
-$onlisting
-/ ;
-
 *trading rules dictate there are two groups of states that can trade with each other
-set csapr_group "CSAPR trading group"
-/
-$offlisting
-$include inputs_case%ds%csapr_group.csv
-$onlisting
-/ ;
-
 $onempty
 table csapr_cap(st,csapr_cat,allt) "--metric tons-- maximum amount of NOX emissions during the ozone season (May-September)"
 $offlisting
@@ -3310,47 +3089,6 @@ parameter quarter_weight_csapr(quarter) "quarter weights for CSAPR ozone season 
 *==============================
 
 * --- transmission sets ---
-set trtype "transmission capacity type"
-/
-$offlisting
-$include inputs_case%ds%trtype.csv
-$onlisting
-/ ;
-
-set aclike(trtype) "AC transmission capacity types"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%aclike.csv
-$offdelim
-$onlisting
-/ ;
-
-set notvsc(trtype) "transmission capacity types that are not VSC"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%notvsc.csv
-$offdelim
-$onlisting
-/ ;
-
-set lcclike(trtype) "transmission capacity types where lines are bundled with AC/DC converters"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%lcclike.csv
-$offdelim
-$onlisting
-/ ;
-
-set trancap_fut_cat "categories of near-term transmission projects that describe the likelihood of being completed"
-/
-$offlisting
-$include inputs_case%ds%trancap_fut_cat.csv
-$onlisting
-/ ;
-
 set routes(r,rr,trtype,t)     "final conditional on transmission feasibility"
     routes_inv(r,rr,trtype,t) "routes where new transmission investment is allowed"
     routes_prm(r,rr)          "routes where PRM trading is allowed"
@@ -3938,13 +3676,6 @@ plant_char0(i,t,"fom")$smr(i) = deflator("2018") * consume_char0(i,t,"fom") /
 plant_char0("electrolyzer",t,"capcost") = deflator("2022") * consume_char0("electrolyzer",t,"cost_cap") * 1000 ;
 plant_char0("electrolyzer",t,"fom") = deflator("2022") * consume_char0("electrolyzer",t,"fom") * 1000 ;
 
-set consumecat "categories for consuming facility characteristics"
-/
-$offlisting
-$include inputs_case%ds%consumecat.csv
-$onlisting
-/ ;
-
 * capcost        - $/(metric ton CO2/hr)
 * fom            - $/(metric ton CO2/hr)/yr
 * vom            - $/metric ton CO2
@@ -4039,22 +3770,6 @@ prod_conversion_rate(i,v,r,t)$[consume(i)$valcap(i,v,r,t)] =
 h2_combustion_intensity = (1/h2_energy_intensity) * (1/lb_per_tonne) * 1e6 ;
 
 * -- H2 Transport network  --
-
-set h2_st "defines investments needed to store and transport H2"
-/
-$offlisting
-$include inputs_case%ds%h2_st.csv
-$onlisting
-/ ;
-
-set h2_stor(h2_st) "H2 storage options"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%h2_stor.csv
-$offdelim
-$onlisting
-/ ;
 
 * Units for H2 transport and storage
 * See ReEDS_2.0_Input_Processing for formatting
@@ -4552,13 +4267,6 @@ heat_rate(i,initv,r,t)$[valcap(i,initv,r,t)$(not heat_rate(i,initv,r,t))] =  pla
 heat_rate(i,v,r,t)$[valcap(i,v,r,t)$sum{allt$att(allt,t), binned_heatrates(i,v,r,allt) }] =
                     sum{allt$att(allt,t), binned_heatrates(i,v,r,allt) } / 1000 ;
 
-
-set prepost "set defining pre-2010 values versus post-2010 values"
-/
-$offlisting
-$include inputs_case%ds%prepost.csv
-$onlisting
-/ ;
 
 *part load heatrate adjust based on historical EIA generation and fuel use data
 *this reflects the indescrepancy from the partial-loaded heat rate
