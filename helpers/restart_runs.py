@@ -7,14 +7,17 @@ import argparse
 from glob import glob
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
+import reeds
 from runreeds import submit_slurm_parallel_jobs
 from runstatus import get_run_status
 
 #%% Argument inputs
 parser = argparse.ArgumentParser(description='Restart failed runs on the HPC')
 parser.add_argument('batch_name', type=str, help='batch name (case prefix) to search for')
-parser.add_argument('--copy_cplex', '-c', type=int, default=0,
-                    help='Which cplex.opt file to copy (or 0 for none)')
+parser.add_argument(
+    '--copy_solver_settings', '-c', action='store_true',
+    help='Copy the solver settings file used by this run from the repo to the run folder',
+)
 parser.add_argument('--copy_srun_template', '-s', action='store_true',
                     help='Copy current srun_template.sh to sbatch file')
 parser.add_argument('--force', '-f', action='store_true',
@@ -28,7 +31,7 @@ parser.add_argument('--include_finished', '-i', action='store_true',
 
 args = parser.parse_args()
 batch_name = args.batch_name
-copy_cplex = args.copy_cplex
+copy_solver_settings = args.copy_solver_settings
 copy_srun_template = args.copy_srun_template
 force = args.force
 more_copyfiles = [i for i in args.more_copyfiles.split(',') if len(i)]
@@ -37,7 +40,7 @@ include_finished = args.include_finished
 
 # #%% Inputs for debugging
 # batch_name = 'v20231113_yamM0'
-# copy_cplex = 1
+# copy_solver_settings = True
 # copy_srun_template = True
 # force = True
 # more_copyfiles = ['report.gms']
@@ -46,7 +49,7 @@ include_finished = args.include_finished
 
 ###### Procedure
 #%% Shared parameters
-reeds_path = os.path.dirname(os.path.abspath(__file__))
+reeds_path = reeds.io.reeds_path
 #%% Get all runs
 dictruns = get_run_status(reeds_path, batch_name)
 
@@ -69,15 +72,6 @@ if not force:
         quit()
 
 
-#%% Get the cplex file to copy
-if copy_cplex:
-    if copy_cplex == 1:
-        cplex_file = os.path.join(reeds_path,'cplex.opt')
-    else:
-        cplex_file = os.path.join(reeds_path,f'cplex.op{copy_cplex}')
-else:
-    cplex_file = None
-
 #%% Copy the header from the srun_template.sh file if desired
 if copy_srun_template:
     srun_template = os.path.join(reeds_path,'reeds','hpc','srun_template.sh')
@@ -92,9 +86,12 @@ else:
 for case in runs_failed:
     casename = os.path.basename(case)
 
-    #%% Copy the cplex file if desired
-    if copy_cplex:
-        shutil.copy(cplex_file, os.path.join(case,''))
+    #%% Copy the solver settings file if desired
+    if copy_solver_settings:
+        fpath_settings = Path(
+            reeds.io.reeds_path, 'reeds', 'solver', reeds.inputs.get_optfile(case)
+        )
+        shutil.copy(fpath_settings, os.path.join(case,''))
 
     #%% Copy additional files if desired
     for f in more_copyfiles:

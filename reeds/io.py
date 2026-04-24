@@ -622,7 +622,7 @@ def standardize_case(case=None):
 def get_switches(case=None, **kwargs):
     """
     Get pd.Series of switch values from switches.csv, ra_switches.csv,
-    and CPLEX opt file.
+    and solver settings file.
     Accepts either {case} or {case}/inputs_case as input.
 
     If {case} is None, the default switch values listed in cases.csv are retrieved.
@@ -680,7 +680,7 @@ def get_switches(case=None, **kwargs):
         int(y) for y in sw.get('GSw_FutureHydCF_RepYears', _fallback).split('_')
     ]
     ### Get number of threads to use in PRAS
-    opt_file = 'cplex.opt' if int(sw.GSw_gopt) == 1 else f'cplex.op{sw.GSw_gopt}'
+    opt_file = reeds.inputs.get_optfile(case)
     try:
         threads = get_param_value(os.path.join(case, 'reeds', 'solver', opt_file), "threads", dtype=int)
     except (FileNotFoundError, TypeError):
