@@ -653,7 +653,7 @@ def get_optfile(case=None, **kwargs):
     Get the name of the optfile used by GAMS, formatted as described by
     https://gams.com/49/docs/UG_GamsCall.html#GAMSAOoptfile
     """
-    sw = reeds.io.get_switches_base(case, **kwargs)
+    sw = get_switches_base(case, **kwargs)
     GSw_gopt = int(sw.GSw_gopt)
     if GSw_gopt == 1:
         suffix = 'opt'
@@ -717,8 +717,8 @@ def get_switches(case=None, **kwargs):
         int(y) for y in sw.get('GSw_FutureHydCF_RepYears', _fallback).split('_')
     ]
     ## Get number of threads to use in PRAS
-    opt_file = reeds.io.get_optfile(case)
-    fpath_opt = Path(case, 'reeds', 'solver', opt_file)
+    opt_file = get_optfile(case)
+    fpath_opt = Path(case, opt_file)
     if not fpath_opt.is_file():
         fpath_opt = Path(reeds_path, 'reeds', 'solver', opt_file)
     threads = get_param_value(fpath_opt, "threads", dtype=int)
