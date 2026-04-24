@@ -521,7 +521,7 @@ if __name__ == '__main__':
 
     calc_financial_inputs(inputs_case)
 
-    reeds.log.toc(tic=tic, year=0, process='inputs/calc_financial_inputs.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/calc_financial_inputs.py', 
         path=os.path.join(inputs_case,'..'))
     
     print('Finished calc_financial_inputs.py')

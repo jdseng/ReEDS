@@ -81,7 +81,7 @@ if(Sw_Upgrades = 1,
     m_capacity_exog(i,v,r,t)$[valcap(i,v,r,t)$sameas(t,"%cur_year%")
                          $(sum{(ii,tt)$[(tt.val <= t.val)$(t.val - tt.val <= Sw_UpgradeLifespan)
                                        $valcap(ii,v,r,tt)$upgrade_from(ii,i)], UPGRADES.l(ii,v,r,tt) } ) ] =
-* [maximum of] initial capacity recorded in d_solveprep
+* [maximum of] initial capacity recorded in e_solveprep
                     max( m_capacity_exog0(i,v,r,t),
 * -or- capacity of upgrades that have occurred from this i v r t combination
                     sum{(ii,tt)$[(tt.val <= t.val)$(t.val - tt.val <= Sw_UpgradeLifespan)

@@ -636,6 +636,6 @@ r_cs_spurlines.to_csv(
 )
 
 #%% Finish the timer
-reeds.log.toc(tic=tic, year=0, process='inputs/transmission.py',
+reeds.log.toc(tic=tic, year=0, process='input_processing/transmission.py',
     path=os.path.join(inputs_case,'..'))
 print('Finished transmission.py', flush=True)

@@ -501,7 +501,7 @@ if __name__ == '__main__':
 
     #%% All done
     reeds.log.toc(
-        tic=tic, year=0, process='inputs/outage_rates.py', 
+        tic=tic, year=0, process='input_processing/outage_rates.py', 
         path=os.path.join(inputs_case,'..'),
     )
     print('Finished outage_rates.py')

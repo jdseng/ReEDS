@@ -509,7 +509,7 @@ if __name__ == '__main__':
                 f'  -> Projected from {lastdatayear} to {endyear}', 
                 flush=True)
 
-    reeds.log.toc(tic=tic, year=0, process='inputs/forecast.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/forecast.py', 
         path=os.path.join(inputs_case,'..'))
     
     print('Finished forecast.py')

@@ -18,6 +18,9 @@ import shutil
 from glob import glob
 import argparse
 import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+import reeds
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_name', '-b', type=str, default='', help='Prefix for batch of runs')
@@ -44,7 +47,10 @@ for case in case_list:
     interim_report = os.path.join(case, "interim_report.py")
     if os.name=='posix':
         if hpc:
-            shutil.copy("srun_template.sh", os.path.join(case, "interim_report.sh"))
+            shutil.copy(
+                Path(reeds.io.reeds_path,'reeds','hpc','srun_template.sh'),
+                os.path.join(case, "interim_report.sh")
+            )
             with open(os.path.join(case, "interim_report.sh"), 'a') as SPATH:
                 #add the name for easy tracking of the case
                 SPATH.writelines("\n#SBATCH --job-name=" + case_name + "_interim_report" + "\n\n")

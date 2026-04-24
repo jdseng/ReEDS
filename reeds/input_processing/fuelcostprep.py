@@ -170,7 +170,7 @@ ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
 ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
 alpha.to_csv(os.path.join(inputs_case,'alpha.csv'))
 
-reeds.log.toc(tic=tic, year=0, process='inputs/fuelcostprep.py', 
+reeds.log.toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
     path=os.path.join(inputs_case,'..'))
 
 print('Finished fuelcostprep.py')

@@ -63,7 +63,7 @@ def solvestring_pcm(
     savefile = f"pcm_{label}_{batch_case}_{t}i{iteration}"
     _stress_year = f"{t}i{iteration}" if stress_year in ['keep', 'default'] else stress_year
     out = (
-        "gams d_solvepcm.gms"
+        f"gams {Path('reeds','core','solve_pcm','solve_pcm.gms')}"
         + (" license=gamslice.txt" if hpc else '')
         + f" o={os.path.join('lstfiles', f'{savefile}.lst')}"
         + f" r={os.path.join('g00files', restartfile)}"
@@ -123,11 +123,11 @@ def submit_job(casepath, command_string, jobname='', joblabel='', bigmem=0):
     """
     Create a slurm job submission script for `command_string` at `casepath`,
     then submit it.
-    Uses the slurm settings from {reeds_path}/srun_template.sh.
+    Uses the slurm settings from {reeds_path}/reeds/hpc/srun_template.sh.
     """
     ### Get the SLURM boilerplate
     commands_header, commands_sbatch, commands_other = [], [], []
-    with open(os.path.join(reeds_path, 'srun_template.sh'), 'r') as f:
+    with open(os.path.join(reeds_path,'reeds','hpc','srun_template.sh'), 'r') as f:
         for line in f:
             if bigmem and ('--mem=' in line):
                 line = '#SBATCH --mem=500000'
@@ -247,7 +247,7 @@ def main(casepath, t, switch_mods=switch_mods_default, label='', overwrite=False
     ### Run GAMS LP
     result = subprocess.run(cmd_gams, shell=True)
     if result.returncode:
-        raise Exception(f'd_solvepcm.gms failed with return code {result.returncode}')
+        raise Exception(f'solve_pcm.gms failed with return code {result.returncode}')
 
     # %% Dump results to gdx
     cmd_report = pcm_report_string(

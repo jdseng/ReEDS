@@ -211,7 +211,7 @@ def calc_tc_phaseout_mult(year, case, use_historical=use_historical):
 #%% PROCEDURE
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(description="""Running tc_phaseout.py""")
+    parser = argparse.ArgumentParser(description="Running 1_tc_phaseout.py")
     parser.add_argument("year", help="ReEDS solve year", type=int)
     parser.add_argument("case", help="filepath for ReEDS case")
     args = parser.parse_args()
@@ -224,6 +224,6 @@ if __name__ == '__main__':
         logpath=os.path.join(case,'gamslog.txt'),
     )
 
-    print(f'starting tc_phaseout.py for {year}')
+    print(f'starting 1_tc_phaseout.py for {year}')
     calc_tc_phaseout_mult(year, case, use_historical=use_historical)
-    print(f'finished tc_phaseout.py for {year}')
+    print(f'finished 1_tc_phaseout.py for {year}')

@@ -82,6 +82,6 @@ if __name__ == "__main__":
             df = pd.DataFrame(columns=["i", "hour", "year"] + val_r)
             df.to_csv(os.path.join(inputs_case, file + ".csv"), index=False)
 
-    reeds.log.toc(tic=tic, year=0, process='inputs/writedrshift.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/writedrshift.py', 
         path=os.path.join(inputs_case,'..'))
     print('Finished writedrshift.py')  

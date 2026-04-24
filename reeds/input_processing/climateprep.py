@@ -216,7 +216,7 @@ if GSw_ClimateHydro:
 if not any([GSw_ClimateWater,GSw_ClimateHydro]):
     print("All climate switches are off.")
 
-reeds.log.toc(tic=tic, year=0, process='inputs/climateprep.py',
+reeds.log.toc(tic=tic, year=0, process='input_processing/climateprep.py',
     path=os.path.join(inputs_case,'..'))
 
 print('Finished climateprep.py')

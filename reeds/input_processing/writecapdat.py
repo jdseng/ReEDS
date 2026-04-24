@@ -891,7 +891,7 @@ if __name__ == '__main__':
             index=keep_index.get(key, False),
         )
 
-    reeds.log.toc(tic=tic, year=0, process='inputs/writecapdat.py',
+    reeds.log.toc(tic=tic, year=0, process='input_processing/writecapdat.py',
         path=os.path.join(inputs_case,'..'))
 
     print('Finished writecapdat.py')

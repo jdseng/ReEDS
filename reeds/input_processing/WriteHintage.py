@@ -768,7 +768,7 @@ if __name__ == '__main__':
     #%% Run it
     main(reeds_path=reeds_path, inputs_case=inputs_case)
 
-    reeds.log.toc(tic=tic, year=0, process='inputs/WriteHintage.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/WriteHintage.py', 
         path=os.path.join(inputs_case,'..'))
 
     print('Finished WriteHintage.py')

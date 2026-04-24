@@ -639,7 +639,7 @@ def setup_intertemporal(
     ):
     ### beginning year is passed to rabatch
     begyear = min(solveyears)
-    ### first save file from d_solveprep is just the case name
+    ### first save file from e_solveprep is just the case name
     savefile = batch_case
     ### if this is the first iteration
     if startiter == 0:
@@ -668,7 +668,7 @@ def setup_intertemporal(
             OPATH.writelines(writeerrorcheck(os.path.join("g00files", restartfile + ".g*")))
 
         OPATH.writelines(
-            f"gams {Path('reeds','core','d_solveallyears.gms')} o="
+            f"gams {Path('reeds','core','3_solve_allyears.gms')} o="
             +os.path.join("lstfiles",batch_case + "_" + str(i) + ".lst")
             +" r="+os.path.join("g00files", restartfile)
             + " gdxcompress=1 xs="+os.path.join("g00files", savefile) + toLogGamsString
@@ -1418,7 +1418,7 @@ def write_batch_script(
 
         ### Make script to unload all data to .gdx file
         command = (
-            'gams dump_alldata.gms'
+            f"gams {Path('reeds','core','terminus','dump_alldata.gms')}"
             + ' o='+os.path.join('lstfiles','dump_alldata_{}_{}.lst'.format(BatchName,case))
         )
         command_write = (
@@ -1509,7 +1509,9 @@ def write_batch_script(
 
         ### Run dispatch mode if desired
         if int(caseSwitches['pcm']):
-            OPATH.writelines(f'\npython run_pcm.py {casedir} -b\n\n')
+            OPATH.writelines(
+                f"\npython {Path('reeds','postprocessing','run_pcm.py')} {casedir} -b\n\n"
+            )
 
 
 def submit_slurm_parallel_jobs(
@@ -1534,7 +1536,7 @@ def submit_slurm_parallel_jobs(
         stop_case_index = min(start_case_index + cases_per_node, num_cases)
         casenames_print = casenames[start_case_index:stop_case_index]
         run_script_fpath = os.path.join(batch_folder, f"run_{'-'.join(casenames_print)}.sh")
-        shutil.copy("srun_template.sh", run_script_fpath)
+        shutil.copy(Path(reeds_path,'reeds','hpc','srun_template.sh'), run_script_fpath)
         job_name = f"{BatchName}_({','.join(casenames_print)})"
 
         writelines = []
@@ -1604,7 +1606,7 @@ def write_case_submission_script(
     """
     # Create a copy of the SLURM template
     slurm_script_path = os.path.join(casedir, batch_case + ".sh")
-    shutil.copy("srun_template.sh", slurm_script_path)
+    shutil.copy(Path(reeds.io.reeds_path,'reeds','hpc','srun_template.sh'), slurm_script_path)
 
     # If using debug node, comment out time and replace with short time
     if debugnode:

@@ -153,4 +153,4 @@ if __name__ == '__main__':
         dfcheck = check_param(param, kwargs, inputs, sw)
 
     #%% Done
-    reeds.log.toc(tic=tic, year=0, process='inputs/check_inputs.py', path=casepath)
+    reeds.log.toc(tic=tic, year=0, process='input_processing/check_inputs.py', path=casepath)

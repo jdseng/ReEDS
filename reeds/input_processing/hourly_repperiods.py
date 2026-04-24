@@ -972,6 +972,6 @@ if __name__ == '__main__':
         )
 
     #%% All done
-    reeds.log.toc(tic=tic, year=0, process='inputs/hourly_repperiods.py', 
+    reeds.log.toc(tic=tic, year=0, process='input_processing/hourly_repperiods.py', 
         path=os.path.join(inputs_case,'..'))
     print('Finished hourly_repperiods.py')

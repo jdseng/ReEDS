@@ -1644,6 +1644,6 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
     reeds.log.toc(
         tic=tic, 
         year=0, 
-        process='inputs/mcs_sampler.py',
+        process='input_processing/mcs_sampler.py',
         path=os.path.join(os.path.dirname(inputs_case))
     )

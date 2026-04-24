@@ -17,7 +17,7 @@ Since we have not yet adopted strict formatting guidelines, do not make code *fo
 -------------| --------------- | ------------ |
 Folders | lowercase | `inputs`, `docs` | 
 Files | typically lowercase with underscores (acronyms often left as uppercase); output files noun first |  `battery_ATB_2024_moderate.csv`, `gen_ann` not `ann_gen` |
-GAMS Files | letter-underscore prefix by category, alpha-ordered; numbering can help communicate ordering when multiple files share a category | `d1_financials.gms`, `d2_varfix.gms` |
+GAMS Files | letter-underscore prefix by category, alpha-ordered; numbering can help communicate ordering when multiple files share a category | `2_financials.gms`, `5_varfix.gms` |
 Parameters | lowercase with underscores, noun first; costs prefixed with "cost" | `curt_marg` not `marg_curt`, `cost_cap` |
 Variables | all caps, noun first | `INV`, `INV_TRANS` |
 Equations (model constraints) | prefixed with `eq_`, lowercase with underscores | `eq_reserve_margin` |
@@ -176,7 +176,7 @@ _Some exceptions to this might exist due to number scaling (e.g., emission rates
 
 * Preprocessing scripts in input_processing should not change the working directory or use relative filepaths; absolute filepaths should be used wherever possible.
 
-* When feasible, inputs used in the objective function (c_supplyobjective.gms) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.
+* When feasible, inputs used in the objective function (`d_objective.gms`) should be included in tests/objective_function_params.yaml. Inputs included in this .yaml file will be checked for missing values using input_processing/check_inputs.py.
 
 #### Input Data
 

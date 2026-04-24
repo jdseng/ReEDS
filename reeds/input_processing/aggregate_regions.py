@@ -1177,7 +1177,7 @@ for filepath in inputfiles:
         raise Exception(err)
 
 #%% Finish
-reeds.log.toc(tic=tic, year=0, process='inputs/aggregate_regions.py',
+reeds.log.toc(tic=tic, year=0, process='input_processing/aggregate_regions.py',
     path=os.path.join(inputs_case,'..'))
 
 print('Finished aggregate_regions.py')

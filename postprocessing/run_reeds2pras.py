@@ -37,7 +37,7 @@ def submit_job(
     jobname = f'PRAS-{os.path.basename(case)}-{samples}'
     ## Get the SLURM boilerplate
     commands_header, commands_sbatch, commands_other = [], [], []
-    with open(os.path.join(reeds_path,'srun_template.sh'), 'r') as f:
+    with open(os.path.join(reeds_path,'reeds','hpc','srun_template.sh'), 'r') as f:
         for line in f:
             if line.strip().startswith('#!'):
                 commands_header.append(line.strip())

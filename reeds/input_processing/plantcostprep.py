@@ -499,7 +499,7 @@ upgrade_mult.round(4).to_csv(os.path.join(inputs_case,'upgrade_mult_final.csv'),
 outdac_elec.to_csv(os.path.join(inputs_case,'consumechardac.csv'), index=False)
 dac_gas.to_csv(os.path.join(inputs_case,'dac_gas.csv'), index=False)
 
-reeds.log.toc(tic=tic, year=0, process='inputs/plantcostprep.py', 
+reeds.log.toc(tic=tic, year=0, process='input_processing/plantcostprep.py', 
     path=os.path.join(inputs_case,'..'))
 
 print('Finished plantcostprep.py')

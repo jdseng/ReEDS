@@ -1686,6 +1686,6 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
     print('Starting copy_files.py')
     main(reeds_path, inputs_case)
 
-    reeds.log.toc(tic=tic, year=0, process='inputs/copy_files.py',
+    reeds.log.toc(tic=tic, year=0, process='input_processing/copy_files.py',
         path=os.path.join(inputs_case,'..'))
     print('Finished copy_files.py')

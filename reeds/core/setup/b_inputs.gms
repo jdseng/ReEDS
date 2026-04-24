@@ -77,7 +77,7 @@ parameter Sw_Timetype(timetype) "Switch that specifies the type of time method u
 
 Sw_Timetype("%timetype%") = 1 ;
 
-* Sw_PCM is always 0 except when running d_solvepcm.gms, where it's set to 1
+* Sw_PCM is always 0 except when running solve_pcm.gms, where it's set to 1
 scalar Sw_PCM "Internal switch used when running PCM mode" / 0 / ;
 * Sw_MGA is always 0 except when running the optimization a second time for MGA, where it's set to 1
 scalar Sw_MGA "Internal switch used when running MGA mode" / 0 / ;
@@ -1481,7 +1481,7 @@ $onlisting
 /,
 
 * pvf_capital and pvf_onm here are for intertemporal mode. These parameters
-* are overwritten for sequential mode in d_solveprep.gms.
+* are overwritten for sequential mode in e_solveprep.gms.
           pvf_capital(t) "--unitless-- present value factor for overnight capital costs"
 /
 $offlisting
@@ -6127,7 +6127,7 @@ cost_curt(t)$[yeart(t)>=model_builds_start_yr] = Sw_CurtMarket ;
 *======================
 
 parameter emit_cap(eall,t)    "--metric tons per year-- annual CO2 emissions cap",
-          yearweight(t)       "--unitless-- weights applied to each solve year for the banking and borrowing cap - updated in d_solveprep.gms",
+          yearweight(t)       "--unitless-- weights applied to each solve year for the banking and borrowing cap - updated in e_solveprep.gms",
           emit_tax(e,r,t)     "--$ per metric ton-- tax applied to emissions" ;
 
 emit_cap(e,t) = 0 ;
@@ -6601,7 +6601,7 @@ z_rep_op(t) = 0 ;
 *== h- and szn-dependent sets and parameters (declared here, populated in 2_temporal_params) ===
 *================================================================================================
 
-* allh and allszn need to be populated here so they can be used in c_supplymodel and c_supplyobjective
+* allh and allszn need to be populated here so they can be used in c_model and d_objective
 Set allh "all potentially modeled hours"
 /
 $offlisting
