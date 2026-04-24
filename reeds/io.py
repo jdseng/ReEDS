@@ -1764,7 +1764,7 @@ def write_csv_to_h5(
     ## For primary sets we use the set name as the output header;
     ## for subsets we read the header from the file
     if primary:
-        df.columns = [key]
+        df.columns = ['*']
     else:
         df.columns = df.loc[0].str.replace('*','').values
         df = df.drop(0)

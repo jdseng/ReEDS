@@ -3511,22 +3511,6 @@ trans_inv_max(t)$[
 *============================
 *Note - NG supply curve has its own section
 
-set f "fuel types"
-/
-$offlisting
-$include inputs_case%ds%f.csv
-$onlisting
-/ ;
-
-set fuel2tech(f,i) "mapping between fuel types and generations"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%fuel2tech.csv
-$offdelim
-$onlisting
-/ ;
-
 *double check in case any sets have been changed.
 fuel2tech("coal",i)$coal(i) = yes ;
 fuel2tech("naturalgas",i)$gas(i) = yes ;
@@ -3538,13 +3522,6 @@ fuel2tech(f,i)$upgrade(i) = sum{ii$upgrade_to(i,ii), fuel2tech(f,ii) } ;
 *===============================
 *   Generator Characteristics
 *===============================
-
-set plantcat "categories for plant characteristics"
-/
-$offlisting
-$include inputs_case%ds%plantcat.csv
-$onlisting
-/ ;
 
 * declared over allt to allow for external data files that extend beyond end_year
 parameter plant_char0(i,allt,plantcat) "--units vary-- input plant characteristics"
@@ -3739,15 +3716,6 @@ plant_char(i,v,t,plantcat) = plant_char0(i,t,plantcat) ;
 
 * -- Consuming Technologies costs and demands --
 
-set i_p(i,p) "mapping from technologies to the products they produce"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%i_p.csv
-$offdelim
-$onlisting
-/ ;
-
 * see note from earlier... converting from MT / MWh from kg / kWh does not require adjustment..
 * but we still need to convert from MWh / MT to MT / MWh <- could choose either units
 * just need to make sure we change signs throughout
@@ -3886,13 +3854,6 @@ h2_network_load(h2_st,allt) = h2_cost_inputs(h2_st,allt,"electric_load") ;
 *==================================
 * --- Flexible CCS Parameters ---
 *==================================
-
-set ccsflex_cat "flexible ccs performance parameter categories"
-/
-$offlisting
-$include inputs_case%ds%ccsflex_cat.csv
-$onlisting
-/ ;
 
 table ccsflex_perf(i,ccsflex_cat)  "--varies-- flexible ccs performance characteristics"
 $offlisting
@@ -4429,21 +4390,7 @@ cf_adj_t(i,newv,t)$[(pv(i) or pvb(i))$countnc(i,newv)$sum{r, valcap(i,newv,r,t) 
 *      --- OPERATING RESERVES ---
 *========================================
 
-set ortype "types of operating reserve constraints"
-/
-$offlisting
-$include inputs_case%ds%ortype.csv
-$onlisting
-/ ;
-
 set opres_model(ortype)       "operating reserve types modeled" ;
-
-set orcat "operating reserve category for RHS calculations"
-/
-$offlisting
-$include inputs_case%ds%orcat.csv
-$onlisting
-/ ;
 
 * define elements in opres_model based on sw_opres
 opres_model(ortype)$[not Sw_Opres] = no ;
@@ -5040,13 +4987,6 @@ emit_rate_limit(e,r,t) = 0 ;
 * Growth limits and penalties
 *============================
 
-set gbin "growth bins"
-/
-$offlisting
-$include inputs_case%ds%gbin.csv
-$onlisting
-/ ;
-        
 *absolute growth penalties based on greatest annual change of capacity for each tech group from 1990-2016
 parameter growth_limit_absolute(tg) "--MW-- growth limit for technology groups in absolute terms"
 /
@@ -5097,13 +5037,6 @@ cost_growth(i,st,t) = 0 ;
 *====================================
 * --- CES Gas supply curve setup ---
 *====================================
-
-set gb "gas price bin must be an odd number of bins, e.g. gb1*gb15"
-/
-$offlisting
-$include inputs_case%ds%gb.csv
-$onlisting
-/ ;
 
 alias(gb,gbb) ;
 
@@ -5284,13 +5217,6 @@ ng_crf_penalty_nat(i,t)$[gas(i)$ccs(i)$sum{r, valcap_irt(i,r,t) }] = 1 ;
 *===========================================
 * --- Regional Gas supply curve ---
 *===========================================
-
-set fuelbin "gas usage bracket"
-/
-$offlisting
-$include inputs_case%ds%fuelbin.csv
-$onlisting
-/ ;
 
 alias(fuelbin,afuelbin) ;
 
@@ -5772,14 +5698,6 @@ if((not Sw_UpgradeDerate),
 * --- BIOMASS SUPPLY CURVES ---
 *==============================
 
-* supply curves defined by 21 price increments
-set bioclass
-/
-$offlisting
-$include inputs_case%ds%bioclass.csv
-$onlisting
-/ ;
-
 set biofeas(r) "regions with biomass supply and biopower";
 
 * supply curve derived from 2016 ORNL Billion Ton study
@@ -5923,15 +5841,6 @@ emit_capped(e)$[gwp(e)$(Sw_AnnualCap=3)] = yes ;
 *====================================
 
 set valret(i,v) "technologies and classes that can be retired" ;
-
-set noretire(i) "technologies that will never be retired"
-/
-$offlisting
-$ondelim
-$include inputs_case%ds%noretire.csv
-$offdelim
-$onlisting
-/ ;
 
 * storage technologies are not appropriately attributing capacity value to CAP variable
 * therefore not allowing them to endogenously retire
