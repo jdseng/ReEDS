@@ -615,8 +615,8 @@ def main(reeds_path, inputs_case):
     # dictating valcap and valgen for initial classes
     numhintage += 2
 
-    initv = [f'init-{i}' for i in range(numhintage)]
-    newv = [f'new{i}' for i in range(int(sw.numclass))]
+    initv = [f'init-{i}' for i in range(1, numhintage+1)]
+    newv = [f'new{i}' for i in range(1, int(sw.numclass)+1)]
     v = initv + newv
 
     reeds.io.write_input_to_h5(
