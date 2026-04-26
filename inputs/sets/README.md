@@ -14,5 +14,27 @@
       - `*food`
       - `apple`
       - `banana`
-- Don't use * for element expansion in GAMS
+- Don't use * or # for element expansion in GAMS
 - Don't use * for full-line comments; only use it for the first (header) row in subset definitions
+
+## Files
+
+- `ctt.csv`: cooling technology types
+  - `o`: once through
+  - `r`: recirculating
+  - `d`: dry cooled
+  - `p`: pond cooled
+  - `n`: no cooling (or generic placeholder)
+- `sc_cat.csv`: resource supply curve data categories
+  - `cap`: power capacity available [MW]
+  - `cost`: total supply curve cost [\$/MW]
+  - `cost_trans`: transmission (spur, point-of-interconnection, and reinforcement) component of supply curve cost [\$/MW]
+  - `cost_cap`: economies of scale, land cost, and other modifier components of supply curve cost [\$/MW]
+- `wst.csv`: water source type
+  - `fsu`:  fresh surface water that is unappropriated
+  - `fsa`:  fresh surface water that is appropriated
+  - `fsl`:  fresh surface lake
+  - `fg`:   fresh groundwater
+  - `sg`:   brackish or saline groundwater
+  - `ss`:   saline surface water
+  - `ww`:   wastewater effluent
