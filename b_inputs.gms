@@ -2443,7 +2443,7 @@ h2_ptc_years(t) = tmodel_new(t)$[sum{(i,v,r),h2_ptc(i,v,r,t)}];
 set i_water_surf(i) "subset of technologies that uses surface water",
   i_w(i,w) "linking set between technology and water use type used in constraining water availability" ;
 
-i_water_surf(i)$[sum{(sw,ctt,ii)$i_ii_ctt_wst(i,ii,ctt,sw), 1}] = yes ;
+i_water_surf(i)$[sum{(wst_surface,ctt,ii)$i_ii_ctt_wst(i,ii,ctt,wst_surface), 1}] = yes ;
 i_w(i,"cons")$[i_water(i)$i_water_surf(i)] = yes ;
 i_w(i,"with")$[i_water(i)$(not i_water_surf(i))] = yes ;
 

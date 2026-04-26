@@ -483,9 +483,13 @@ def read_input(
     h5path = Path(reeds.io.standardize_case(case), 'inputs_case', 'inputs.h5')
     csvpath = Path(h5path.parent, f'{key}.csv')
     if h5path.is_file():
-        df = read_h5(h5path, key)
+        try:
+            df = read_h5(h5path, key)
+        ## Fall back to csv if the requested dataset is not yet in inputs.h5
+        except KeyError:
+            df = pd.read_csv(csvpath, **kwargs)
     elif csvpath.is_file():
-        df = pd.read_csv(csvpath)
+        df = pd.read_csv(csvpath, **kwargs)
     else:
         raise FileNotFoundError(f'Neither {h5path} nor {csvpath} exist')
     return df

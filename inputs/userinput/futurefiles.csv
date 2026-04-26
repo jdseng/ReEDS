@@ -432,7 +432,6 @@ supplycurve_geohydro.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 supplycurve_upv.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 supplycurve_wind-ofs.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 supplycurve_wind-ons.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
-sw.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 switches.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 tax_rate.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new; handled in calc_financial_inputs.py,
 tc_phaseout_schedule.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,

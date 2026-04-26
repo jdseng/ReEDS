@@ -396,7 +396,7 @@ supplycurve_egs.csv,inputs/supply_curve/supplycurve_egs-reference.csv,int(sw.GSw
 supplycurve_upv.csv,inputs/supply_curve/supplycurve_upv-{GSw_SitingUPV}.csv,1,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 supplycurve_wind-ofs.csv,inputs/supply_curve/supplycurve_wind-ofs-{GSw_SitingWindOfs}.csv,int(sw.GSw_OfsWind) != 0,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
 supplycurve_wind-ons.csv,inputs/supply_curve/supplycurve_wind-ons-{GSw_SitingWindOns}.csv,1,ignore,ignore,region,,,,0,,,,,,No fix_col (only region_col) because this is an intermediate input file
-sw.csv,inputs/sets/sw.csv,1,ignore,ignore,,,,,0,,,set,sw,surface water types where access is based on consumption not withdrawal,
+wst_surface.csv,inputs/sets/wst_surface.csv,1,ignore,ignore,,,,,0,,,set,wst_surface,surface water types where access is based on consumption not withdrawal,
 switches.csv,,1,ignore,ignore,,,,,0,,,,,,
 szn_actualszn.csv,,1,ignore,ignore,,,,,0,,,,,,
 tc_phaseout_schedule.csv,inputs/financials/tc_phaseout_schedule_{GSw_TCPhaseout_schedule}.csv,int(sw.GSw_TCPhaseout) != 0,ignore,ignore,,,,,0,,,,,,
