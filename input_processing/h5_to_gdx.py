@@ -31,7 +31,10 @@ def read_inputs(case):
                 if isinstance(comments[key], np.float64):
                     comments[key] = ''
             columns = [i.decode() for i in list(f[key]['columns'])]
-            df = pd.DataFrame({col: f[key][col] for col in columns})
+            try:
+                df = pd.DataFrame({col: f[key][col] for col in columns})
+            except KeyError:
+                df = pd.DataFrame(columns=columns)
             for col in df:
                 if df[col].dtype == 'O':
                     df[col] = df[col].str.decode('utf-8')
@@ -43,10 +46,11 @@ def get_declaration(df):
     """
     For everything except primary sets, return the domain as "(dim1,dim2,...)"
     """
-    if (len(df.columns) == 1) and (df.columns[0] == '*'):
+    columns = [i for i in df.columns if i != 'Value']
+    if (len(columns) == 1) and (columns[0] == '*'):
         out = ''
     else:
-        out = '(' + ','.join(df.columns) + ')'
+        out = '(' + ','.join(columns) + ')'
     return out
 
 
@@ -82,9 +86,9 @@ def write_declaration(
         if len(writelist):
             for line in writelist:
                 f.write(f'{gamstype} {line} ;\n')
-                # if line in aliases:
-                for alias in aliases.get([line], []):
-                    f.write(f'alias({line},{alias}) ;\n')
+                name = line.split('(')[0]
+                for alias in aliases.get([name], []):
+                    f.write(f'alias({name},{alias}) ;\n')
     print(f'Wrote {fpath}')
 
 
@@ -164,7 +168,7 @@ if __name__ == '__main__':
     case = reeds.io.standardize_case(Path(args.inputs_case))
 
     # #%% Inputs for testing
-    # case = Path(reeds.io.reeds_path, 'runs', 'v20260424_inputsM3_Pacific')
+    # case = Path(reeds.io.reeds_path, 'runs', 'v20260425_inputsM2_github_Pacific')
 
     #%% Set up logger
     log = reeds.log.makelog(

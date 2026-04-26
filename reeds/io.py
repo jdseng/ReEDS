@@ -458,7 +458,10 @@ def read_h5(h5path:str|Path, key:str) -> pd.DataFrame():
         raise FileNotFoundError(h5path)
     with h5py.File(h5path, 'r') as f:
         columns = [i.decode() for i in list(f[key]['columns'])]
-        df = pd.DataFrame({col: f[key][col] for col in columns})
+        try:
+            df = pd.DataFrame({col: f[key][col] for col in columns})
+        except KeyError:
+            df = pd.DataFrame(columns=columns)
     for col in df:
         if df[col].dtype == 'O':
             df[col] = df[col].str.decode('utf-8')
@@ -1712,15 +1715,14 @@ def write_input_to_h5(
     df,
     key:str,
     case:str|Path,
+    gamstype:Literal['set','parameter']='set',
     comment:str='',
-    gamstype='parameter',
+    verbose=1,
     **kwargs,
 ):
     """
     """
     ### Parse inputs
-    assert gamstype.lower() in ['set', 'parameter']
-
     if Path(case).name == 'inputs_case':
         h5path = os.path.join(case, 'inputs.h5')
     elif Path(case).suffix == '.h5':
@@ -1728,24 +1730,39 @@ def write_input_to_h5(
     else:
         h5path = Path(case, 'inputs_case', 'inputs.h5')
 
+    dfwrite = df.copy()
+    ## We write all the info in the dataframe but ignore the index, so if sets are used
+    ## as the index, move them into the dataframe
+    if isinstance(dfwrite, pd.Series):
+        dfwrite = dfwrite.to_frame()
+    if isinstance(dfwrite.index, pd.MultiIndex) or dfwrite.index.name:
+        dfwrite = dfwrite.reset_index()
+    ## Format for GAMS: The final column of a parameter should be named 'Value' and
+    ## should contain the data as floats; all the other columns are treated as indices
+    if gamstype == 'parameter':
+        dfwrite.columns = dfwrite.columns.tolist()[:-1] + ['Value']
+        # if dfwrite.columns[0].startswith('*'):
+        #     dfwrite.columns = [dfwrite.columns[0].lstrip('*')] + dfwrite.columns[1:]
     ### Write record to h5 file
     attrs = {'gamstype': gamstype.lower()}
     if len(comment):
         attrs['comment'] = comment
     write_to_h5(
-        df,
+        dfwrite,
         key,
         h5path,
         attrs=attrs,
         **kwargs,
     )
+    if verbose:
+        print(f'{Path(h5path).name}: Wrote {key}')
 
 
 def write_csv_to_h5(
     filepath:str|Path,
     case:str|Path,
+    gamstype:Literal['set','parameter']='set',
     comment:str='',
-    gamstype:Literal['set']='set',
     **kwargs,
 ):
     """
