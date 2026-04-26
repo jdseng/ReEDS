@@ -72,29 +72,6 @@ $include inputs_case%ds%scalars.txt
 * --- Set Declarations ---
 *==========================
 
-*## Spatial sets (define first so case stays consistent)
-* written by copy_files.py
-$onOrder
-set r "regions"
-/
-$offlisting
-$include inputs_case%ds%val_r.csv
-$onlisting
-/ ;
-$offOrder
-
-$onempty
-set offshore(r) "offshore zones"
-/
-$offlisting
-$include inputs_case%ds%offshore.csv
-$onlisting
-/ ;
-$offempty
-
-set land(r) "land-based (not offshore) zones" ;
-land(r)$[not offshore(r)] = yes ;
-
 * written by copy_files.py
 $onempty
 set cs(*) "carbon storage sites"
@@ -104,86 +81,6 @@ $include inputs_case%ds%val_cs.csv
 $onlisting
 / ;
 $offempty
-
-* created in and mapped to hierarchy in recf.py
-set ccreg "capacity credit regions"
-/
-$offlisting
-$include inputs_case%ds%ccreg.csv
-$onlisting
-/ ;
-
-Sets
-nercr "NERC regions"
-* https://www.nerc.com/pa/RAPA/ra/Reliability%20Assessments%20DL/NERC_LTRA_2021.pdf
-/
-* written by copy_files.py
-$include inputs_case%ds%val_nercr.csv
-/
-
-transreg "Transmission Planning Regions from FERC order 1000"
-* (https://www.ferc.gov/sites/default/files/industries/electric/indus-act/trans-plan/trans-plan-map.pdf)
-/
-* written by copy_files.py
-$include inputs_case%ds%val_transreg.csv
-/,
-
-transgrp "sub-FERC-1000 regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_transgrp.csv
-/,
-
-itlgrp "ReEDS zones for additional ITL constraints when doing a run that includes county resolution"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_itlgrp.csv
-/,
-
-cendiv "census divisions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_cendiv.csv
-/,
-
-interconnect "interconnection regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_interconnect.csv
-/,
-
-country "country regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_country.csv
-/,
-
-st "US, Mexico, and/or Canadian States/Provinces"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_st.csv
-/,
-
-* biomass supply curves defined by USDA region
-usda_region "Biomass supply curve regions"
-/
-* written by copy_files.py
-$include inputs_case%ds%val_usda_region.csv
-/,
-
-h2ptcreg "Regions which enforce the H2 production incentive regulations, for the US these are the National Transmission Needs Study regions"
-* https://www.energy.gov/sites/default/files/2023-12/National%20Transmission%20Needs%20Study%20Supplemental%20Material%20-%20Final_2023.12.1.pdf
-/
-* written by copy_files.py
-$include inputs_case%ds%val_h2ptcreg.csv
-/
-
-* Hurdle rate regions
-hurdlereg "Hurdle regions"
-/
-$include inputs_case%ds%val_hurdlereg.csv
-/
-;
 
 * Written by h5_to_gdx.py
 * $declareAndLoad inputs_case%ds%inputs_0.gdx
@@ -198,6 +95,9 @@ $gdxin inputs_case%ds%inputs_0.gdx
 $include b_load_sets.gms
 $include b_load_parameters.gms
 $gdxin
+
+set land(r) "land-based (not offshore) zones" ;
+land(r)$[not offshore(r)] = yes ;
 
 sets
 *The following two sets:

@@ -1008,10 +1008,7 @@ def get_temperatures(case, tz_in='UTC', tz_out='Etc/GMT+6', subset_years=True):
     ## Add one more year on either end of weather years to allow for timezone conversion
     weather_years = sw.resource_adequacy_years_list
     read_years = range(min(weather_years)-1, max(weather_years)+2)
-    val_st = (
-        pd.read_csv(os.path.join(inputs_case, 'val_st.csv'), header=None)
-        .squeeze(1).values
-    )
+    val_st = reeds.io.read_input(inputs_case, 'st').squeeze(1).values
     ### Load temperatures
     _temperatures = {}
     with h5py.File(h5path, 'r') as f:

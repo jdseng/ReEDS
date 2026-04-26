@@ -52,8 +52,7 @@ trans_init_year = int(sw.GSw_TransNetworkSource[-4:])
 
 valid_regions = {}
 for level in ['r','itlgrp','transgrp']:
-    valid_regions[level] = pd.read_csv(
-        os.path.join(inputs_case, f'val_{level}.csv'), header=None).squeeze(1).tolist()
+    valid_regions[level] = reeds.io.read_input(inputs_case, level).squeeze(1).tolist()
 
 
 #%% ===========================================================================
@@ -498,8 +497,8 @@ reeds.io.write_input_to_h5(
     df=transmission_cost_ac.tscbin.drop_duplicates().rename('*').to_frame(),
     key='tscbin',
     case=inputs_case,
-    comment='transmission upgrade supply curve bins',
     gamstype='set',
+    comment='transmission upgrade supply curve bins',
 )
 
 

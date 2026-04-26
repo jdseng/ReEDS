@@ -868,7 +868,7 @@ if __name__ == '__main__':
     # Single Resolution Procedure
     else: 
         agglevel = agglevel_variables['agglevel']
-        regions = pd.read_csv(os.path.join(inputs_case,f'val_{agglevel}.csv'),header=None).squeeze(1).values
+        regions = reeds.io.read_input(inputs_case, agglevel).squeeze(1).values
         data = main(reeds_path, inputs_case,agglevel, regions)
 
     # Write it

@@ -355,9 +355,11 @@ def get_regions_and_agglevel(
     hier_sub[['r','itlgrp']].rename(columns={'r':'*r'}).to_csv(
         os.path.join(inputs_case, 'hierarchy_itlgrp.csv'), index=False)
 
-    # save the itlgrp values
-    hier_sub[['itlgrp']].drop_duplicates().to_csv(
-        os.path.join(inputs_case, 'val_itlgrp.csv'), header=False, index=False)
+    itlgrp = hier_sub['itlgrp'].drop_duplicates().rename('*')
+    reeds.io.write_input_to_h5(
+        itlgrp, 'itlgrp', inputs_case, gamstype='set',
+        comment='zone for additional interface transfer limit constraint',
+    )
 
     # Drop any substate region columns as these will no longer be needed
     hier_sub = hier_sub.drop(['county', 'ba', 'itlgrp'], axis=1)
@@ -369,13 +371,27 @@ def get_regions_and_agglevel(
     # Write out the unique values of each column in hier_sub to val_[column name].csv
     # Note the conversion to a pd Series is necessary to leverage the to_csv function
     if save_regions_and_agglevel:
-        for i in hier_sub.columns.drop('offshore', errors='ignore'):
-            pd.Series(hier_sub[i].unique()).to_csv(
-                os.path.join(inputs_case,'val_' + i + '.csv'),index=False,header=False)
+        comments = {
+            'aggreg': 'aggregated region',
+            'cendiv': 'census division',
+            'country': 'nation',
+            'h2ptcreg': 'H2 production tax credit region',
+            'hurdlereg': 'hurdle rate region (for extra costs on interregional flows)',
+            'interconnect': 'synchronous interconnection',
+            'nercr': 'NERC region',
+            'transgrp': 'sub-FERC-1000 region',
+            'transreg': 'Transmission Planning Regions from FERC Order 1000',
+            'usda_region': 'biomass supply curve region',
+        }
+        for level, comment in comments.items():
+            df = pd.Series(hier_sub[level].unique(), name='*')
+            reeds.io.write_input_to_h5(df, level, inputs_case, gamstype='set', comment=comment)
 
-        # Overwrite val_st with the val_st used here (which includes 'voluntary')
-        pd.Series(val_st).to_csv(
-            os.path.join(inputs_case, 'val_st.csv'), header=False, index=False)
+        # Use a modified version of val_st that includes 'voluntary'
+        reeds.io.write_input_to_h5(
+            pd.Series(val_st, name='*'), 'st', inputs_case, gamstype='set',
+            comment="state (or special 'voluntary' entry for corporate procurements)",
+        )
 
         # Rename columns and save as hierarchy.csv
         (
@@ -385,8 +401,9 @@ def get_regions_and_agglevel(
         ).to_csv(os.path.join(inputs_case, 'hierarchy.csv'), index=False)
 
         # Write offshore zones
-        hier_sub.loc[hier_sub.offshore == 1, 'r'].to_csv(
-            os.path.join(inputs_case, 'offshore.csv'), index=False, header=False,
+        offshore = hier_sub.loc[hier_sub.offshore == 1, 'r']
+        reeds.io.write_input_to_h5(
+            offshore, 'offshore', inputs_case, gamstype='set', comment='offshore zones',
         )
 
     levels = [i for i in hier_sub if i != 'offshore']
@@ -396,8 +413,10 @@ def get_regions_and_agglevel(
 
     # Export region files
     if save_regions_and_agglevel:
-        pd.Series(val_r).to_csv(
-            os.path.join(inputs_case, 'val_r.csv'), header=False, index=False)
+        reeds.io.write_input_to_h5(
+            pd.Series(val_r, name='*'), 'r', inputs_case, gamstype='set',
+            comment='regions',
+        )
 
     regions_and_agglevel = {
         "valid_regions": valid_regions,
@@ -968,9 +987,9 @@ def write_non_region_file(
                 reeds.io.write_csv_to_h5(
                     filepath=row.full_filepath,
                     case=case,
-                    comment=(row.comment if isinstance(row.comment, str) else ''),
                     gamstype=row.GAMStype.lower(),
-                    overwrite=True, # TEMPORARY for testing
+                    comment=(row.comment if isinstance(row.comment, str) else ''),
+                    overwrite=True,
                 )
             else:
                 shutil.copy(row.full_filepath, os.path.join(dir_dst, row.filename))
@@ -1455,11 +1474,11 @@ def write_miscellaneous_files(
     )[sw['GSw_PRM_CapCreditSeasons']].rename('ccseason')
     ccseason_dates.to_csv(os.path.join(inputs_case, 'ccseason_dates.csv'))
     reeds.io.write_input_to_h5(
-        df=ccseason_dates.drop_duplicates().rename('*').to_frame(),
+        df=ccseason_dates.drop_duplicates().rename('*').reset_index(drop=True),
         key='ccseason',
         case=inputs_case,
-        comment='seasons used for capacity credit',
         gamstype='set',
+        comment='seasons used for capacity credit',
     )
 
     prm_profiles = pd.read_csv(
