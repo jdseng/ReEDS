@@ -116,6 +116,11 @@ def write_load(
 def main(case, overwrite=True, verbose=1):
     dictin, gamstypes, comments = read_inputs(case)
     gdxpath = Path(reeds.io.standardize_case(case), 'inputs_case', 'inputs_0.gdx')
+    ## Some sets need to be defined first to conserve ordering
+    keys_in = list(dictin.keys())
+    special_keys = ['r']
+    keys = special_keys + [i for i in keys_in if i not in special_keys]
+    ## Load each h5 key and write it to gdx
     declare_sets = []
     declare_parameters = []
     if gdxpath.is_file():
@@ -124,7 +129,8 @@ def main(case, overwrite=True, verbose=1):
         else:
             raise FileExistsError(gdxpath)
     with gdxpds.gdx.GdxFile() as gdx:
-        for key, df in dictin.items():
+        for key in keys:
+            df = dictin[key]
             if gamstypes[key] == 'set':
                 gdxpds.gdx.append_set(
                     gdx_file=gdx,
@@ -145,6 +151,7 @@ def main(case, overwrite=True, verbose=1):
                 raise NotImplementedError(gamstypes[key])
         gdx.write(gdxpath)
         print(f'Wrote inputs.h5 to {gdxpath}')
+    ## Write GAMS code to declare and load the sets/parameters
     write_declaration(case, declare_sets, 'set')
     write_declaration(case, declare_parameters, 'parameter')
     write_load(case, declare_sets, 'set')
@@ -168,7 +175,7 @@ if __name__ == '__main__':
     case = reeds.io.standardize_case(Path(args.inputs_case))
 
     # #%% Inputs for testing
-    # case = Path(reeds.io.reeds_path, 'runs', 'v20260425_inputsM2_github_Pacific')
+    # case = Path(reeds.io.reeds_path, 'runs', 'v20260427_inputsM0_github_Everything')
 
     #%% Set up logger
     log = reeds.log.makelog(
