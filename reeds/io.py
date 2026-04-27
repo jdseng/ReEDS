@@ -490,10 +490,11 @@ def read_output(
                     df[col] = df[col].str.decode('utf-8')
         except KeyError:
             ## Empty dataframes aren't written to h5 file, so make one ourselves
-            report_params = pd.read_csv(
-                os.path.join(case, 'reeds', 'core', 'terminus', 'report_params.csv'),
-                comment='#',
-            )
+            fpath = Path(case, 'reeds', 'core', 'terminus', 'report_params.csv')
+            ## Fall back to older params list if necessary for backwards compatibility
+            if not fpath.is_file():
+                fpath = Path(case, 'e_report_params.csv')
+            report_params = pd.read_csv(fpath, comment='#')
             _index = report_params.loc[
                 report_params.param.map(lambda x: x.split('(')[0]) == key, 'param'
             ].squeeze()
