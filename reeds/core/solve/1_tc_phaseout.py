@@ -14,9 +14,9 @@ Based on the Inflation Reduction Act of 2022
 ###########
 #%% IMPORTS
 import argparse
+import gdxpds
 import pandas as pd
 import numpy as np
-import gdxpds
 import os
 import sys
 from pathlib import Path

@@ -25,9 +25,9 @@ The files used by PRAS are:
 #%% General imports
 import os
 import re
+import gdxpds
 import pandas as pd
 import numpy as np
-import gdxpds
 ### Local imports
 import reeds
 

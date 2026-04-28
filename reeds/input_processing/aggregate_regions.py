@@ -21,8 +21,8 @@ Notes to user:
 import argparse
 import numpy as np
 import os
-import pandas as pd
 import gdxpds
+import pandas as pd
 import shutil
 import sys
 import datetime

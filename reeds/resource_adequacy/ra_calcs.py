@@ -4,8 +4,8 @@ import os
 import sys
 import subprocess
 import datetime
-import pandas as pd
 import gdxpds
+import pandas as pd
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import reeds

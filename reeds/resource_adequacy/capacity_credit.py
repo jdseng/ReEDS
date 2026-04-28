@@ -1,8 +1,8 @@
 #%% IMPORTS
 import os
+import gdxpds
 import numpy as np
 import pandas as pd
-import gdxpds
 import reeds
 
 

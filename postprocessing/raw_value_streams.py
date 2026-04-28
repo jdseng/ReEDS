@@ -3,8 +3,8 @@ This file can be used to combine a coefficient matrix file (non-pre-solved) and 
 from GAMS gdx solution file to produce value streams for the variables of the model.
 '''
 
-import pandas as pd
 import gdxpds
+import pandas as pd
 import subprocess
 from datetime import datetime
 import logging

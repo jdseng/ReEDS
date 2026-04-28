@@ -1,6 +1,7 @@
 #%%### Imports
 import os
 import sys
+import gdxpds
 import pandas as pd
 import numpy as np
 import matplotlib as mpl
@@ -8,7 +9,6 @@ import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
 from glob import glob
 import traceback
-import gdxpds
 import cmocean
 ### Local imports
 from pathlib import Path

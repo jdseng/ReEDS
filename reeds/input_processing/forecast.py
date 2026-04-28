@@ -16,9 +16,9 @@ one similarly-formatted file in inputs_case that you can copy the settings for.
 ### ===========================================================================
 
 import argparse
+import gdxpds
 import pandas as pd
 import numpy as np
-import gdxpds
 import os
 import sys
 import shutil

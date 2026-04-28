@@ -2,6 +2,7 @@
 ### --- IMPORTS ---
 ### ===========================================================================
 
+import reeds
 import os
 import git
 import queue
@@ -17,7 +18,6 @@ import re
 from datetime import datetime
 import argparse
 from pathlib import Path
-import reeds
 
 # Assert core programs are accessible
 CORE_PROGRAMS = ["gams"]
