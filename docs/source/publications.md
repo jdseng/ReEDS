@@ -39,7 +39,7 @@ Serpe, L.; Cole, W.; Sergi, B.; Brown, M;, Carag, V.; Karmakar, A. 2025. "[The i
 ```{dropdown-color} 2024
 :animate: fade-in-slide-down 
 
-Brinkman, G., Bannister, M., Bredenkamp, S., Carveth, L., Corbus, D., Green, R., Lavin, L., Lopez, A., Marquis, M., Mowers, J., Mowers, M., Rese, L., Roberts, B., Rose, A., Shah, S., Sharma, P., Sun, H., Wang, B., Vyakaranam, B., Royer, P. 2024. “[Atlantic Offshore Wind Transmission Study](https://www.nrel.gov/wind/atlantic-offshore-wind-transmission-study).” U.S. Department of Energy.
+Brinkman, G., Bannister, M., Bredenkamp, S., Carveth, L., Corbus, D., Green, R., Lavin, L., Lopez, A., Marquis, M., Mowers, J., Mowers, M., Rese, L., Roberts, B., Rose, A., Shah, S., Sharma, P., Sun, H., Wang, B., Vyakaranam, B., Royer, P. 2024. “[Atlantic Offshore Wind Transmission Study](https://www.nlr.gov/wind/atlantic-offshore-wind-transmission-study).” U.S. Department of Energy.
 
 
 Brown, P. R., Williams, T., Brown, M. L., & Murphy, C. 2024. “[System-Cost-Minimizing Deployment of PV-Wind Hybrids in Low-Carbon U.S. Power Systems](https://www.sciencedirect.com/science/article/pii/S0306261924005348?via%3Dihub).” _Applied Energy_, 365, 123151.
