@@ -230,11 +230,20 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
     )
 
     ### Check all stress criteria; for regions that fail, add new stress periods
-    # _eue_sorted_periods = {}
     _stress_sorted_periods = {}
     failed = {}
     high_stress_periods = {}
     shoulder_periods = {}
+
+    # Validation check: Display any GSw_PRM_StressThreshold{metric}
+    # that is not specified in GSw_PRM_StressThresholdMetrics
+    stressThresholdMetrics = [s.split('GSw_PRM_StressThreshold')[1] 
+                             for s in sw.keys() if s.startswith('GSw_PRM_StressThreshold')
+                             and not s.endswith('Metrics') and s.split('GSw_PRM_StressThreshold')[1] != "" 
+                             ]
+    for s in stressThresholdMetrics:
+        if s not in sw.GSw_PRM_StressThresholdMetrics.split('/'):
+            print(f"Warning: {s} is not included in GSw_PRM_StressThresholdMetrics, so it will not be evaluated")
 
     # stress periods column names for writing outputs
     stress_metrics_units_mapping = {'EUE':'MWh', 'NEUE':'ppm', 'LOLE':'events'}
@@ -243,8 +252,12 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
                                     stress_metrics_units_mapping.values())}
 
     for metric in sw.GSw_PRM_StressThresholdMetrics.split('/'):
-        for criterion in sw[f'GSw_PRM_StressThreshold{metric}'].split('/'): 
-            print(f"Evaluating GSw_PRM_StressThreshold {metric} with criterion: {criterion}")
+        if sw[f'GSw_PRM_StressThreshold{metric.upper()}'] not in sw.keys():
+            raise NotImplementedError(
+                f"GSw_PRM_StressThreshold{metric.upper()} not found in switches"
+            )
+        for criterion in sw[f'GSw_PRM_StressThreshold{metric.upper()}'].split('/'): 
+            print(f"Evaluating GSw_PRM_StressThreshold {metric.upper()} with criterion: {criterion}")
             ## Example: criterion = 'transgrp_10_EUE_sum'
             (hierarchy_level, stress_level, stress_metric, period_agg_method) = criterion.split('_')
 
