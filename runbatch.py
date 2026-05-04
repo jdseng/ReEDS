@@ -1429,9 +1429,13 @@ def write_batch_script(
         ### Otherwise, run for the last iteration (lexicographically sorted)
         else:
             OPATH.writelines(
-                f"for r in g00files/{batch_case}_*.g00; do true; done\n"
+                f"r=$(ls g00files/{batch_case}_*.g00 2>/dev/null | sort -V | tail -1)\n"
                 if LINUXORMAC else
-                f'for %%i in (g00files\{batch_case}_*.g00) do (set "r=%%i")\n'
+                f'for /f "delims=" %%i in (\'python -c '
+                f'"from pathlib import Path; '
+                f'print(max(Path(\'g00files\').glob(\'{batch_case}_{max(solveyears)}i*.g00\'), '
+                f'key=lambda f: int(f.stem[f.stem.rfind(\'i\')+1:])).name)"\') '
+                f'do set "r=g00files\\%%i"\n'
             )
         OPATH.writelines(
             "gams e_report.gms"
