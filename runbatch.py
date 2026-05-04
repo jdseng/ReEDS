@@ -319,33 +319,38 @@ def check_compatibility(sw):
     reeds_path = os.path.dirname(__file__)
     hierarchy = reeds.io.get_hierarchy(GSw_ZoneSet=sw['GSw_ZoneSet']).reset_index()
 
-    for threshold in sw['GSw_PRM_StressThreshold'].split('/'):
-        ## Example: threshold = 'transgrp_10_EUE_sum'
-        allowed_levels = ['country','interconnect','nercr','transreg','transgrp','st','r']
-        (hierarchy_level, ppm, stress_metric, period_agg_method) = threshold.split('_')
-        if hierarchy_level not in allowed_levels:
-            raise ValueError(
-                f"GSw_PRM_StressThreshold: level={hierarchy_level} but must be in:\n"
-                + '\n'.join(allowed_levels)
-            )
-        if period_agg_method.lower() not in ['sum','max']:
-            raise ValueError("Fix period agg method in GSw_PRM_StressThreshold")
-        if not (float(ppm) >= 0):
-            raise ValueError(
-                "ppm in GSw_PRM_StressThreshold must be a positive number "
-                f"but '{ppm}' was provided"
-            )
-        if stress_metric.upper() not in ['EUE','NEUE']:
-            raise ValueError(
-                "stress metric in GSw_PRM_StressThreshold must be 'EUE' or 'NEUE' "
-                f"but '{stress_metric}' was provided"
-            )
-        if (sw['GSw_PRM_StressModel'].lower() != 'pras') and (stress_metric.upper() != 'EUE'):
-            err = (
-                f"The combination of GSw_PRM_StressModel={sw['GSw_PRM_StressModel']} and "
-                f"stress_metric={stress_metric} is not supported."
-            )
-            raise NotImplementedError(err)
+    stressThresholdMetrics = [s.split('GSw_PRM_StressThreshold')[1] 
+                             for s in sw.keys() if s.startswith('GSw_PRM_StressThreshold')
+                             and not s.endswith('Metrics') 
+                             ]
+    for stress_metric in stressThresholdMetrics:
+        for threshold in sw[f'GSw_PRM_StressThreshold{stress_metric}'].split('/'):
+            ## Example: threshold = 'transgrp_10_EUE_sum'
+            allowed_levels = ['country','interconnect','nercr','transreg','transgrp','st','r']
+            (hierarchy_level, ppm, stress_metric, period_agg_method) = threshold.split('_')
+            if hierarchy_level not in allowed_levels:
+                raise ValueError(
+                    f"GSw_PRM_StressThreshold{stress_metric}: level={hierarchy_level} but must be in:\n"
+                    + '\n'.join(allowed_levels)
+                )
+            if period_agg_method.lower() not in ['sum','max']:
+                raise ValueError(f"Fix period agg method in GSw_PRM_StressThreshold{stress_metric}")
+            if not (float(ppm) >= 0):
+                raise ValueError(
+                    f"ppm in GSw_PRM_StressThreshold{stress_metric} must be a positive number "
+                    f"but '{ppm}' was provided"
+                )
+            if stress_metric.upper() not in ['EUE','NEUE', 'LOLE']:
+                raise ValueError(
+                    f"stress metric in GSw_PRM_StressThreshold{stress_metric} must be 'EUE', 'NEUE', or 'LOLE' "
+                    f"but '{stress_metric}' was provided"
+                )
+            if (sw['GSw_PRM_StressModel'].lower() != 'pras') and (stress_metric.upper() != 'EUE'):
+                err = (
+                    f"The combination of GSw_PRM_StressModel={sw['GSw_PRM_StressModel']} and "
+                    f"stress_metric={stress_metric} is not supported."
+                )
+                raise NotImplementedError(err)
         
     if sw['GSw_PRM_StressStorageCutoff'].lower() not in ['off','0','false']:
         metric, value = sw['GSw_PRM_StressStorageCutoff'].split('_')
