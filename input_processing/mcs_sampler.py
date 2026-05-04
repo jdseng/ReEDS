@@ -71,6 +71,8 @@ class MCSConstants:
     ]
     MULTIPLICATIVE_DISTRIBUTIONS = ["uniform_multiplier", "triangular_multiplier"]
 
+    ASSIGNMENT_NUM = {"uniform": 2, "uniform_multiplier": 2,  "triangular": 3, "triangular_multiplier": 3}
+
 
 #%% ===========================================================================
 ### --- Auxiliary functions ---
@@ -239,13 +241,27 @@ def get_hierarchy_file(inputs_case: str, ReEDS_resolution: str) -> pd.DataFrame:
 
     return filtered_hierarchy
 
+def check_lhs_settings(dist_params, sample_group):
+    if len(dist_params) == 2 and len(set(dist_params)) == 1:
+        new_distribution = "uniform"
+    elif len(dist_params) == 3 and len(set(dist_params)) == 1:
+        new_distribution = "triangular"
+    else:
+        error_message = (
+            "Latin hypercube sampling not supported for dirichlet distributions "
+            "except for when dist_params are set to [1,1] (uniform) or [1,1,1] (triangular). "
+            f"Check settings for {sample_group['name']} or set 'MCS_lhs=0' in your cases file."
+        )
+        raise ValueError(error_message)
+
+    return new_distribution
+
 def check_lhs_param_order(lower, upper):
     # ensure that lower (loc) < upper (loc + scale)
     lower_new = np.where(lower > upper, upper, lower)
     upper_new = np.where(lower > upper, lower, upper)
-    
-    return lower_new, upper_new
 
+    return lower_new, upper_new
 
 #%% ===========================================================================
 ### --- FILE PATHS & DISTRIBUTION INSTRUCTIONS ---
@@ -349,48 +365,79 @@ def general_mcs_dist_validation(reeds_path: str, mcs_dist_path: str, sw: pd.Seri
     cases_default = pd.read_csv(os.path.join(reeds_path, 'cases.csv'))
     valid_switches = cases_default.iloc[:, 0].values
 
-    # Validate mandatory keys in df_input_dist
+    ## Verify that all dist group names in mcs_distributions.yaml are unique
+    if df_input_dist['name'].nunique() != len(df_input_dist):
+        raise ValueError('The distribution names in mcs_distributions.yaml are not unique. Please correct the file')
+
+    ## Ensure all MCS_dist_groups options are present in the input distribution names.
+    missing = set(mcs_dist_groups) - set(df_input_dist['name'].unique())
+    if missing:
+        raise ValueError(f"The following MCS_dist_groups switch options are missing in mcs_distributions.yaml {missing}")
+    
+    # subset to groups selected in mcs_dist_groups
+    df_input_dist = df_input_dist[df_input_dist['name'].isin(mcs_dist_groups)].reset_index(drop=True)
+
+    ## Validate mandatory keys in df_input_dist
     required_keys = {'name', 'assignments_list', 'dist', 'dist_params', 'weight_r'}
     missing_keys = required_keys - set(df_input_dist.columns)
     if missing_keys:
         raise ValueError(f"Missing mandatory keys in mcs_distributions.yaml object: {missing_keys}")
 
-    # Make sure that dist_params is a list
+    ## Make sure that dist_params is a list
     if not all(isinstance(df_input_dist.at[i, 'dist_params'], list) for i in range(len(df_input_dist))):
         raise ValueError('The dist_params field must be a list')
 
-    # Verify that all dist group names in mcs_distributions.yaml are unique.
-    if df_input_dist['name'].nunique() != len(df_input_dist):
-        raise ValueError('The distribution names in mcs_distributions.yaml are not unique. Please correct the file')
 
-    # Ensure that we are not missing data for each row of the input distribution file.
+    ## Ensure that we are not missing data for each row of the input distribution file
     missing_data = df_input_dist.isnull().sum(axis=1)
     if missing_data.any():
         raise ValueError(f"The following dist names have missing data: {df_input_dist.loc[missing_data > 0, 'name'].values}. "
                         "Make sure you have all mandatory fields in the input distribution file")
 
-    # Ignore all cases not in mcs_dist_groups
-    df_input_dist = df_input_dist[df_input_dist['name'].isin(mcs_dist_groups)].reset_index(drop=True)
-    
-    # Ensure all MCS_dist_groups options are present in the input distribution names.
-    missing = set(mcs_dist_groups) - set(df_input_dist['name'].unique())
-    if missing:
-        raise ValueError(f"The following MCS_dist_groups switch options are missing in mcs_distributions.yaml {missing}")
-
+    ## check specific settings for each distribution group
     for i, sample_group in df_input_dist.iterrows():
         distribution = sample_group['dist']
-
         switch_names = [next(iter(s)) for s in sample_group["assignments_list"]]
         sw_assignments = [next(iter(s.values())) for s in sample_group["assignments_list"]]
+    
+        ## check that distribution specified is valid
+        if distribution not in MCSConstants.VALID_DISTRIBUTIONS:
+            raise ValueError(
+                f"The distribution {distribution} is not supported."
+                f"Please choose one of the following: {MCSConstants.VALID_DISTRIBUTIONS}")
 
+        ## check switch assignments given in valid format
         for d in sample_group["assignments_list"]:
             if not (isinstance(d, dict) and len(d) == 1):
                 raise ValueError("Each item in assignments_list must be a single-key dictionary")
-
             val = next(iter(d.values()))
             if not isinstance(val, list):
                 raise ValueError("The value in each dictionary must be a list")
 
+        ## check for the correct number of assignments or parameters
+        num_sw_assignments = [len(c) for c in sw_assignments]
+        # distributions with specific assignment requirements
+        if distribution in MCSConstants.ASSIGNMENT_NUM:
+            if distribution in MCSConstants.MULTIPLICATIVE_DISTRIBUTIONS:
+                if len(sample_group['dist_params']) != MCSConstants.ASSIGNMENT_NUM[distribution]:
+                    raise ValueError(
+                        f"{distribution} for {sample_group['name']} requires {MCSConstants.ASSIGNMENT_NUM[distribution]} "
+                        f"dist_params values but has {len(sample_group['dist_params'])}"
+                    )
+            else:
+                if len(set(num_sw_assignments)) != 1 or num_sw_assignments[0] != MCSConstants.ASSIGNMENT_NUM[distribution]:
+                    raise ValueError(
+                        f"{distribution} for {sample_group['name']} requires {MCSConstants.ASSIGNMENT_NUM[distribution]} "
+                        f"switch assignments but has {set(num_sw_assignments)}"
+                        )
+        # other distributions needs the same number of switch assignments and parameters
+        else:
+            if not all([num == len(sample_group["dist_params"]) for num in num_sw_assignments]):
+                raise ValueError(
+                    "The number of switch assignments in assignments_list and the number dist_params"
+                    f" do not match for {sample_group['name']}."
+                )
+        ## siting switch options can only be used with specific distributions
         if distribution not in ["dirichlet", "discrete"] and any(
             switch in MCSConstants.SITING_SWITCHES for switch in switch_names
         ):
@@ -398,26 +445,39 @@ def general_mcs_dist_validation(reeds_path: str, mcs_dist_path: str, sw: pd.Seri
                 "The siting related switches can only be sampled "
                 "using a dirichlet or discrete distribution"
                 )
-
-        if distribution not in MCSConstants.VALID_DISTRIBUTIONS:
-            raise ValueError(
-                f"The distribution {distribution} is not supported."
-                f"Please choose one of the following: {MCSConstants.VALID_DISTRIBUTIONS}")
-
+        
+        ## check that multiplicative distributions use the correct number of settings
         if distribution in MCSConstants.MULTIPLICATIVE_DISTRIBUTIONS:
-            num_files = np.max([len(c) for c in sw_assignments])
+            # must have one file/setting per switch
+            num_files = np.max(num_sw_assignments)
             if num_files > 1:
                 raise ValueError(
                     f"The distribution {distribution} can only have a single reference file/value per switch."
                 )
-
-        # Iterate over each switch in the instruction.
+            
+        ## Iterate over each switch and check if valid
         for sw_name in switch_names:
-            # Check if the switch is valid.
             if sw_name not in valid_switches:
                 raise ValueError(f'The switch {sw_name} is not a valid switch. Please check cases.csv')
+            # siting sampling is currently broken
+            if sw_name in MCSConstants.SITING_SWITCHES:
+                raise ValueError(
+                    f'Sampling using siting switches {MCSConstants.SITING_SWITCHES} is currently disabled. '
+                    'For details see https://github.com/ReEDS-Model/ReEDS/issues/41.'
+                )
 
-
+        ## check rules for latin hypercube sampling
+        if int(sw.MCS_lhs):
+            # not currently supported with regional sampling
+            if sample_group['weight_r'] != "country":
+                raise ValueError(
+                    "Latin hypercube sampling not supported for regional-level sampling. "
+                    f"Adjust the sampling choice for {sample_group['name']} or set 'MCS_lhs=0'."
+                )
+            # latin hypercube only works with specific types of dirichlet
+            if distribution == "dirichlet":
+                check_lhs_settings(sample_group["dist_params"], sample_group)
+            
 def get_dist_instructions(reeds_path: str, inputs_case: str) -> Tuple[pd.DataFrame, dict]:
     """
     Obtain the instructions to sample the distributions for each switch 
@@ -1439,7 +1499,6 @@ class MCS_Sampler:
 
         # Get shape of any region’s weight array
         any_region = next(iter(r_weights))
-        # TODO: this probably needs testing
         n_assignments = r_weights[any_region].shape
 
         # Build column names
@@ -1495,7 +1554,6 @@ class MCS_Sampler:
         # draw lhs samples; 'sample_num' matches the sample row for the relevant ReEDS run and
         # 'dim_num' matches the relevant column for the dimension
         lhs_vals = triang.ppf(self.lhs_samples[sample_num, dim_num], c=tri_c, loc=tri_loc, scale=tri_scale)
-        # TODO: instead of sample_idx could assing labels for easier matching
         
         return lhs_vals
 
@@ -1515,7 +1573,6 @@ class MCS_Sampler:
         sw_assignments = self.sample_group['sw_assignments'][sample_idx]
 
         if self.distribution == "triangular":
-            #TODO: add to validation that this has three parameters
             lower, mode, upper = sw_assignments
             # get sample values
             lhs_sw_val = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
@@ -1551,33 +1608,12 @@ class MCS_Sampler:
             if self.distribution == "dirichlet":
                 # special case: dirichlet with two or three of the same parameters are 
                 # equivalent to uniform and triangular, respectively
-
-                # TODO: move this out of the loop
-                # TODO: move checking in upstream 
-                if len(self.dist_params) == 2 and len(set(self.dist_params)) == 1:
-                    self.distribution = "uniform"
-                elif len(self.dist_params) == 3 and len(set(self.dist_params)) == 1:
-                    self.distribution = "triangular"
-                else:
-                    error_message = (
-                        "Latin hypercube sampling not supported for dirichlet distributions "
-                        "except for when dist_params are set to [1,1] (uniform) or [1,1,1] (triangular). "
-                        f"Check settings for {self.sample_group['name']}"
-                    )
-                    raise ValueError(error_message)
-                    
+                self.distribution = check_lhs_settings(self.dist_params, self.sample_group)        
             if self.distribution == "triangular":
-                if len(dist_files) != 3:
-                    error_message = (
-                        f"Triangular distributions require 3 parameters but {len(dist_params)} "
-                        f"are specified for {self.sample_group['name']}."
-                    )
-                    raise ValueError(error_message)
-
                 # get triangular distribution parameters (ordering checked in sample_lhs_triangular function)
-                lower = np.array(dist_files[2][mod_col])
+                lower = np.array(dist_files[0][mod_col])
                 mode = np.array(dist_files[1][mod_col])
-                upper = np.array(dist_files[0][mod_col])
+                upper = np.array(dist_files[2][mod_col])
                 
                 # get new values
                 lhs_vals = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
@@ -1586,13 +1622,6 @@ class MCS_Sampler:
                 samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
                     
             elif self.distribution == "uniform":
-                if len(dist_files) != 2:
-                    error_message = (
-                        f"Uniform distributions require 2 parameters but {len(dist_params)} "
-                        f"are specified for {self.sample_group['name']}."
-                    )
-                    raise ValueError(error_message)
-
                 lower = np.array(dist_files[0][mod_col])
                 upper = np.array(dist_files[1][mod_col])
 
@@ -1608,8 +1637,6 @@ class MCS_Sampler:
                 # TODO: add support for multiplicative distributions
                 breakpoint()
 
-
-        # TODO: add adjustments for other files, decimals, etc.
 
         self.samples[Sample_ID] = samples_sw
         # output: dictionary of sample values by filename (see samples_dict)
