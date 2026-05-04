@@ -3,7 +3,6 @@ This module performs the Monte Carlo sampling for ReEDS.
 """
 
 # TODO: clean up function documentation
-# TODO: move supply curve related processing into separate class?
 
 
 #%% ===========================================================================
@@ -941,19 +940,19 @@ class WeightCalculator:
 
         return self.recf_weights_map[sw_name]
 
-    def normalize_recf_weights_map(self, samples_sw: list, sw_name: str) -> None:
+    def normalize_recf_weights_map(self, samples_sw: pd.DataFrame, sw_name: str) -> None:
         """
         The recf map is responsible for informing how the old class/region data files
         need to be put together (weights) to form the new class/region data.
         After creating the new supply curve sample, we normalize the weights to sum to 1.
 
         Args:
-            samples_sw (list of pd.DataFrame): List of samples for the supply curve files.
+            samples_sw (pd.DataFrame): The sampled supply curve DataFrame.
             sw_name (str): Name of the switch being sampled.
 
         Updates:
             self.recf_weights_map (dict): Dictionary with the normalized weights for the recf files.
-                Each element of this dictionary is a pd.DataFrame (for the sample s and reference file f)
+                Each element of this dictionary is a pd.DataFrame (for the reference file f)
                 with the normalized weights, indexed by new and old class|region (c|r).
         """
         n_files = len({key[1] for key in self.recf_weights_map[sw_name].keys()})
@@ -962,8 +961,8 @@ class WeightCalculator:
         for f in range(n_files):
             # Add a new column with the new class|region combination
             self.recf_weights_map[sw_name][f]["new c|r"] = (
-                samples_sw[s]["class"].astype(str) + "|" +
-                samples_sw[s]["region"].astype(str)
+                samples_sw["class"].astype(str) + "|" +
+                samples_sw["region"].astype(str)
             )
 
             # Sum the weights for each new class|region combination
@@ -1191,7 +1190,7 @@ class MCS_Sampler:
         return dist_files
 
     # ----------------------- Weight Application Helpers -----------------------
-    def _adjust_supply_curve_sample(self, samples_sw: list, sw_name: str, sample_idx: int) -> list:
+    def _adjust_supply_curve_sample(self, samples_sw: pd.DataFrame, sw_name: str, sample_idx: int) -> pd.DataFrame:
         """
         Adjust samples for supply curve files:
           - Convert the 'class' column to integers.
@@ -1199,12 +1198,12 @@ class MCS_Sampler:
           - Remove rows with no capacity.
 
         Args:
-            samples_sw (list of pd.DataFrame): List of samples for the supply curve files.
+            samples_sw (pd.DataFrame): The sampled supply curve DataFrame.
             sw_name (str): Name of the switch being sampled.
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Returns:
-            list of pd.DataFrame: List of adjusted samples for the supply curve files.
+            pd.DataFrame: Adjusted supply curve sample.
         """
 
         # Convert class to integer
@@ -1215,23 +1214,25 @@ class MCS_Sampler:
 
         # Remove samples with no capacity. 
         # Need to do this after normalizing the recf weights
-        # TODO: may need to adjust this after removing iteration over samples
-        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
+        samples_sw = samples_sw[samples_sw["capacity"] > 0]
         
         return samples_sw
 
-    def _adjust_exog_cap_samples(self, samples_sw: list, file_name: str) -> list:
+    def _adjust_exog_cap_samples(self, samples_sw: pd.DataFrame, file_name: str) -> pd.DataFrame:
         """
         Adjust samples for exogenous capacity files:
           - Remove rows with no capacity.
           - Adjust the tech classes based on available classes per sc_point_gid.
 
         Args:
-            samples_sw (list of pd.DataFrame): List of samples for the exogenous capacity files.
+            samples_sw (pd.DataFrame): The sampled exogenous capacity DataFrame.
             file_name (str): Name of the file being sampled.
+
+        Returns:
+            pd.DataFrame: Adjusted exogenous capacity sample.
         """
         # Remove samples with no capacity
-        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
+        samples_sw = samples_sw[samples_sw["capacity"] > 0].copy()
 
         tech_mapping = {
             "exog_cap_upv.csv": ("upv", "supplycurve_upv.csv"),
@@ -1243,7 +1244,7 @@ class MCS_Sampler:
         class_sc_point_map = self.samples[Sample_ID][["sc_point_gid", "class"]]
         class_sc_point_map = class_sc_point_map.set_index("sc_point_gid").to_dict()["class"]
 
-        # Remove any rows from samples_sw[s] that cannot be mapped
+        # Remove any rows from samples_sw that cannot be mapped
         # These are cases with zero supply in the region
         valid_sc_point_gids = samples_sw["sc_point_gid"].isin(class_sc_point_map.keys())
         samples_sw = samples_sw[valid_sc_point_gids].copy()
@@ -1290,7 +1291,6 @@ class MCS_Sampler:
 
         for f, df in enumerate(dist_files):
             samples_sw[modifiable_columns] += df[modifiable_columns] * dict_df_weights[f][modifiable_columns] 
-        # TODO: ok to delete the +1 on rounding here?
         samples_sw = samples_sw.round(n_decimals)
 
         if file_name in MCSConstants.SUPPLY_CURVE_FILES:
@@ -1301,8 +1301,7 @@ class MCS_Sampler:
 
         elif file_name in MCSConstants.PRESCRIBED_BUILDS_FILES:
             # Remove samples with no capacity
-            # TODO: may need to adjust this after removing iteration over samples
-            adjusted_samples = [df[df["capacity"] > 0].copy() for df in samples_sw]
+            adjusted_samples = samples_sw[samples_sw["capacity"] > 0]
 
         else:
             # For all other files we can directly apply the weights
@@ -1347,10 +1346,8 @@ class MCS_Sampler:
         # Round numbers to 9 decimal places and allow a maxium values of 1
         for new_c_r in sample_sw.keys():
             sample_sw[new_c_r] = sample_sw[new_c_r].round(9).clip(0,1)
-        
-        samples_sw.append(pd.DataFrame(sample_sw, index=indexes))
 
-        self.samples[Sample_ID] = samples_sw
+        self.samples[Sample_ID] = pd.DataFrame(sample_sw, index=indexes)
 
     def _apply_weights_switches_csv(
         self,
@@ -1473,6 +1470,7 @@ class MCS_Sampler:
             weight_record_df.to_csv(save_path, mode='a', index=False, header=False)
         else:
             weight_record_df.to_csv(save_path, mode='w', index=False, header=True)
+
     # ----------------------- End of Weight Application Helpers -----------------------
 
     def sample_lhs_uniform(self, sample_num, dim_num, lower, upper):
