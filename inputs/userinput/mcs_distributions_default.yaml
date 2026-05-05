@@ -15,6 +15,8 @@
 # 3. dist: Type of distribution to use. Options are:
 #    - dirichlet (weighted average)
 #    - discrete
+#    - triangular
+#    - uniform
 #    - triangular_multiplier
 #    - uniform_multiplier
 #
@@ -27,6 +29,7 @@
 # 5. weight_r: For some files (those with regional data) we support the possibility of applying
 #    different weights to different ReEDS hierarchies. This field specifies the hierarchy 
 #    considered (e.g. country, st, ba, transgrp, etc- weight_r: country is always supported).
+#    Note that regional weights are not currently supported with latin hypercube sampling.
 #
 # Special cases:
 # 1. switches.csv: If you want to apply a distribution to a value in switches.csv,

@@ -3,7 +3,6 @@ This module performs the Monte Carlo sampling for ReEDS.
 """
 
 # TODO: clean up function documentation
-# TODO: move supply curve related processing into separate class?
 
 
 #%% ===========================================================================
@@ -71,6 +70,8 @@ class MCSConstants:
         "uniform_multiplier", "triangular_multiplier"
     ]
     MULTIPLICATIVE_DISTRIBUTIONS = ["uniform_multiplier", "triangular_multiplier"]
+
+    ASSIGNMENT_NUM = {"uniform": 2, "uniform_multiplier": 2,  "triangular": 3, "triangular_multiplier": 3}
 
 
 #%% ===========================================================================
@@ -240,13 +241,52 @@ def get_hierarchy_file(inputs_case: str, ReEDS_resolution: str) -> pd.DataFrame:
 
     return filtered_hierarchy
 
+def check_lhs_settings(dist_params, sample_group):
+    """Check whether a dirichlet distribution can be mapped to a supported LHS distribution.
+
+    Dirichlet distributions with identical parameters of length 2 or 3 are
+    equivalent to uniform or triangular distributions, respectively, which
+    are supported by the LHS sampler.
+
+    Args:
+        dist_params (list): The distribution parameters from the sample group.
+        sample_group (pd.Series): Row of the distribution instructions DataFrame.
+
+    Returns:
+        str: The equivalent distribution name ('uniform' or 'triangular').
+
+    Raises:
+        ValueError: If the dirichlet parameters cannot be mapped to a supported distribution.
+    """
+    if len(dist_params) == 2 and len(set(dist_params)) == 1:
+        new_distribution = "uniform"
+    elif len(dist_params) == 3 and len(set(dist_params)) == 1:
+        new_distribution = "triangular"
+    else:
+        error_message = (
+            "Latin hypercube sampling not supported for dirichlet distributions "
+            "except for when dist_params are set to [1,1] (uniform) or [1,1,1] (triangular). "
+            f"Check settings for {sample_group['name']} or set 'MCS_lhs=0' in your cases file."
+        )
+        raise ValueError(error_message)
+
+    return new_distribution
+
 def check_lhs_param_order(lower, upper):
+    """Ensure lower bounds are less than upper bounds, swapping where necessary.
+
+    Args:
+        lower (np.ndarray or float): Lower bound value(s).
+        upper (np.ndarray or float): Upper bound value(s).
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Corrected (lower, upper) arrays.
+    """
     # ensure that lower (loc) < upper (loc + scale)
     lower_new = np.where(lower > upper, upper, lower)
     upper_new = np.where(lower > upper, lower, upper)
-    
-    return lower_new, upper_new
 
+    return lower_new, upper_new
 
 #%% ===========================================================================
 ### --- FILE PATHS & DISTRIBUTION INSTRUCTIONS ---
@@ -350,48 +390,79 @@ def general_mcs_dist_validation(reeds_path: str, mcs_dist_path: str, sw: pd.Seri
     cases_default = pd.read_csv(os.path.join(reeds_path, 'cases.csv'))
     valid_switches = cases_default.iloc[:, 0].values
 
-    # Validate mandatory keys in df_input_dist
+    ## Verify that all dist group names in mcs_distributions.yaml are unique
+    if df_input_dist['name'].nunique() != len(df_input_dist):
+        raise ValueError('The distribution names in mcs_distributions.yaml are not unique. Please correct the file')
+
+    ## Ensure all MCS_dist_groups options are present in the input distribution names.
+    missing = set(mcs_dist_groups) - set(df_input_dist['name'].unique())
+    if missing:
+        raise ValueError(f"The following MCS_dist_groups switch options are missing in mcs_distributions.yaml {missing}")
+    
+    # subset to groups selected in mcs_dist_groups
+    df_input_dist = df_input_dist[df_input_dist['name'].isin(mcs_dist_groups)].reset_index(drop=True)
+
+    ## Validate mandatory keys in df_input_dist
     required_keys = {'name', 'assignments_list', 'dist', 'dist_params', 'weight_r'}
     missing_keys = required_keys - set(df_input_dist.columns)
     if missing_keys:
         raise ValueError(f"Missing mandatory keys in mcs_distributions.yaml object: {missing_keys}")
 
-    # Make sure that dist_params is a list
+    ## Make sure that dist_params is a list
     if not all(isinstance(df_input_dist.at[i, 'dist_params'], list) for i in range(len(df_input_dist))):
         raise ValueError('The dist_params field must be a list')
 
-    # Verify that all dist group names in mcs_distributions.yaml are unique.
-    if df_input_dist['name'].nunique() != len(df_input_dist):
-        raise ValueError('The distribution names in mcs_distributions.yaml are not unique. Please correct the file')
 
-    # Ensure that we are not missing data for each row of the input distribution file.
+    ## Ensure that we are not missing data for each row of the input distribution file
     missing_data = df_input_dist.isnull().sum(axis=1)
     if missing_data.any():
         raise ValueError(f"The following dist names have missing data: {df_input_dist.loc[missing_data > 0, 'name'].values}. "
                         "Make sure you have all mandatory fields in the input distribution file")
 
-    # Ignore all cases not in mcs_dist_groups
-    df_input_dist = df_input_dist[df_input_dist['name'].isin(mcs_dist_groups)].reset_index(drop=True)
-    
-    # Ensure all MCS_dist_groups options are present in the input distribution names.
-    missing = set(mcs_dist_groups) - set(df_input_dist['name'].unique())
-    if missing:
-        raise ValueError(f"The following MCS_dist_groups switch options are missing in mcs_distributions.yaml {missing}")
-
+    ## check specific settings for each distribution group
     for i, sample_group in df_input_dist.iterrows():
         distribution = sample_group['dist']
-
         switch_names = [next(iter(s)) for s in sample_group["assignments_list"]]
         sw_assignments = [next(iter(s.values())) for s in sample_group["assignments_list"]]
+    
+        ## check that distribution specified is valid
+        if distribution not in MCSConstants.VALID_DISTRIBUTIONS:
+            raise ValueError(
+                f"The distribution {distribution} is not supported."
+                f"Please choose one of the following: {MCSConstants.VALID_DISTRIBUTIONS}")
 
+        ## check switch assignments given in valid format
         for d in sample_group["assignments_list"]:
             if not (isinstance(d, dict) and len(d) == 1):
                 raise ValueError("Each item in assignments_list must be a single-key dictionary")
-
             val = next(iter(d.values()))
             if not isinstance(val, list):
                 raise ValueError("The value in each dictionary must be a list")
 
+        ## check for the correct number of assignments or parameters
+        num_sw_assignments = [len(c) for c in sw_assignments]
+        # distributions with specific assignment requirements
+        if distribution in MCSConstants.ASSIGNMENT_NUM:
+            if distribution in MCSConstants.MULTIPLICATIVE_DISTRIBUTIONS:
+                if len(sample_group['dist_params']) != MCSConstants.ASSIGNMENT_NUM[distribution]:
+                    raise ValueError(
+                        f"{distribution} for {sample_group['name']} requires {MCSConstants.ASSIGNMENT_NUM[distribution]} "
+                        f"dist_params values but has {len(sample_group['dist_params'])}"
+                    )
+            else:
+                if len(set(num_sw_assignments)) != 1 or num_sw_assignments[0] != MCSConstants.ASSIGNMENT_NUM[distribution]:
+                    raise ValueError(
+                        f"{distribution} for {sample_group['name']} requires {MCSConstants.ASSIGNMENT_NUM[distribution]} "
+                        f"switch assignments but has {set(num_sw_assignments)}"
+                        )
+        # other distributions needs the same number of switch assignments and parameters
+        else:
+            if not all([num == len(sample_group["dist_params"]) for num in num_sw_assignments]):
+                raise ValueError(
+                    "The number of switch assignments in assignments_list and the number dist_params"
+                    f" do not match for {sample_group['name']}."
+                )
+        ## siting switch options can only be used with specific distributions
         if distribution not in ["dirichlet", "discrete"] and any(
             switch in MCSConstants.SITING_SWITCHES for switch in switch_names
         ):
@@ -399,26 +470,46 @@ def general_mcs_dist_validation(reeds_path: str, mcs_dist_path: str, sw: pd.Seri
                 "The siting related switches can only be sampled "
                 "using a dirichlet or discrete distribution"
                 )
-
-        if distribution not in MCSConstants.VALID_DISTRIBUTIONS:
-            raise ValueError(
-                f"The distribution {distribution} is not supported."
-                f"Please choose one of the following: {MCSConstants.VALID_DISTRIBUTIONS}")
-
+        
+        ## check that multiplicative distributions use the correct number of settings
         if distribution in MCSConstants.MULTIPLICATIVE_DISTRIBUTIONS:
-            num_files = np.max([len(c) for c in sw_assignments])
+            # must have one file/setting per switch
+            num_files = np.max(num_sw_assignments)
             if num_files > 1:
                 raise ValueError(
                     f"The distribution {distribution} can only have a single reference file/value per switch."
                 )
-
-        # Iterate over each switch in the instruction.
+            
+        ## Iterate over each switch and check if valid
         for sw_name in switch_names:
-            # Check if the switch is valid.
             if sw_name not in valid_switches:
                 raise ValueError(f'The switch {sw_name} is not a valid switch. Please check cases.csv')
+            # siting sampling is currently broken
+            if sw_name in MCSConstants.SITING_SWITCHES:
+                raise ValueError(
+                    f'Sampling using siting switches {MCSConstants.SITING_SWITCHES} is currently disabled. '
+                    'For details see https://github.com/ReEDS-Model/ReEDS/issues/41.'
+                )
 
-
+        ## check rules for latin hypercube sampling
+        if int(sw.MCS_lhs):
+            # not currently supported with regional sampling
+            if sample_group['weight_r'] != "country":
+                raise ValueError(
+                    "Latin hypercube sampling not supported for regional-level sampling. "
+                    f"Adjust the sampling choice for {sample_group['name']} or set 'MCS_lhs=0'."
+                )
+            # latin hypercube only works with specific types of dirichlet
+            if distribution == "dirichlet":
+                check_lhs_settings(sample_group["dist_params"], sample_group)
+        else:
+            # triangular and uniform only supported for latin hypercube
+            if distribution in ['triangular', 'uniform']:
+                raise ValueError(
+                    f"To implement a uniform or triangular for {sample_group['name']} using random sampling (MCS_lhs=0), "
+                    "set the distribution to 'dirichlet' with dist_params equal to [1,1] or [1,1,1]."
+                )
+            
 def get_dist_instructions(reeds_path: str, inputs_case: str) -> Tuple[pd.DataFrame, dict]:
     """
     Obtain the instructions to sample the distributions for each switch 
@@ -535,16 +626,13 @@ def get_region_weights(distribution: str, dist_params: list) -> np.ndarray:
 
     if distribution == "dirichlet":
         r_weights = np.random.dirichlet(dist_params, n_samples_weight)
-
     elif distribution == "discrete":
         prob = np.array(dist_params) / np.sum(dist_params)
         sampled_index = np.random.choice(len(dist_params), n_samples_weight, p=prob)[0]
         r_weights = np.zeros(len(dist_params), dtype=int)
         r_weights[sampled_index] = 1
-
     elif distribution == "uniform_multiplier":
         r_weights = np.random.uniform(dist_params[0], dist_params[1], n_samples_weight)
-
     elif distribution == "triangular_multiplier":
         r_weights = np.random.triangular(dist_params[0], dist_params[1], dist_params[2], n_samples_weight)
 
@@ -722,7 +810,8 @@ class WeightCalculator:
             file_name (str): Name of the file we are getting the weights for.
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame | float]: Dictionary mapping reference file index to
+                the weight values for that file.
         """
 
         self._validate_inputs(dist_files, sw_name, file_name)
@@ -755,7 +844,8 @@ class WeightCalculator:
             file_name (str): Name of the file we are getting the weights for.
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame | float]: Dictionary mapping reference file index to
+                the weight values for that file.
         """
         # Number of reference files/values. Since all sw_assignments
         # have the same number of files, we can use the first one.
@@ -832,10 +922,11 @@ class WeightCalculator:
             sw_name (str): Name of the switch we are getting the weights for.
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame]: Dictionary mapping reference file index to
+                the weight DataFrame for that file.
         """
         # Dictionary to store computed weights for the modifiable columns
-        # (sample, file) -> pd.DataFrame
+        # file index -> pd.DataFrame
         dict_df_weights = {}
 
         # Store weights to use later in the recf files (CF files)
@@ -898,7 +989,8 @@ class WeightCalculator:
             dist_files (list of pd.DataFrame): List of reference dataframes (ajusted to have the same # of rows)
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame]: Dictionary mapping reference file index to
+                the weight DataFrame for that file.
         """
         dict_df_weights = {}
         for f, df in enumerate(dist_files):
@@ -941,19 +1033,19 @@ class WeightCalculator:
 
         return self.recf_weights_map[sw_name]
 
-    def normalize_recf_weights_map(self, samples_sw: list, sw_name: str) -> None:
+    def normalize_recf_weights_map(self, samples_sw: pd.DataFrame, sw_name: str) -> None:
         """
         The recf map is responsible for informing how the old class/region data files
         need to be put together (weights) to form the new class/region data.
         After creating the new supply curve sample, we normalize the weights to sum to 1.
 
         Args:
-            samples_sw (list of pd.DataFrame): List of samples for the supply curve files.
+            samples_sw (pd.DataFrame): The sampled supply curve DataFrame.
             sw_name (str): Name of the switch being sampled.
 
         Updates:
             self.recf_weights_map (dict): Dictionary with the normalized weights for the recf files.
-                Each element of this dictionary is a pd.DataFrame (for the sample s and reference file f)
+                Each element of this dictionary is a pd.DataFrame (for the reference file f)
                 with the normalized weights, indexed by new and old class|region (c|r).
         """
         n_files = len({key[1] for key in self.recf_weights_map[sw_name].keys()})
@@ -962,8 +1054,8 @@ class WeightCalculator:
         for f in range(n_files):
             # Add a new column with the new class|region combination
             self.recf_weights_map[sw_name][f]["new c|r"] = (
-                samples_sw[s]["class"].astype(str) + "|" +
-                samples_sw[s]["region"].astype(str)
+                samples_sw["class"].astype(str) + "|" +
+                samples_sw["region"].astype(str)
             )
 
             # Sum the weights for each new class|region combination
@@ -1191,7 +1283,7 @@ class MCS_Sampler:
         return dist_files
 
     # ----------------------- Weight Application Helpers -----------------------
-    def _adjust_supply_curve_sample(self, samples_sw: list, sw_name: str, sample_idx: int) -> list:
+    def _adjust_supply_curve_sample(self, samples_sw: pd.DataFrame, sw_name: str, sample_idx: int) -> pd.DataFrame:
         """
         Adjust samples for supply curve files:
           - Convert the 'class' column to integers.
@@ -1199,12 +1291,12 @@ class MCS_Sampler:
           - Remove rows with no capacity.
 
         Args:
-            samples_sw (list of pd.DataFrame): List of samples for the supply curve files.
+            samples_sw (pd.DataFrame): The sampled supply curve DataFrame.
             sw_name (str): Name of the switch being sampled.
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Returns:
-            list of pd.DataFrame: List of adjusted samples for the supply curve files.
+            pd.DataFrame: Adjusted supply curve sample.
         """
 
         # Convert class to integer
@@ -1215,23 +1307,25 @@ class MCS_Sampler:
 
         # Remove samples with no capacity. 
         # Need to do this after normalizing the recf weights
-        # TODO: may need to adjust this after removing iteration over samples
-        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
+        samples_sw = samples_sw[samples_sw["capacity"] > 0]
         
         return samples_sw
 
-    def _adjust_exog_cap_samples(self, samples_sw: list, file_name: str) -> list:
+    def _adjust_exog_cap_samples(self, samples_sw: pd.DataFrame, file_name: str) -> pd.DataFrame:
         """
         Adjust samples for exogenous capacity files:
           - Remove rows with no capacity.
           - Adjust the tech classes based on available classes per sc_point_gid.
 
         Args:
-            samples_sw (list of pd.DataFrame): List of samples for the exogenous capacity files.
+            samples_sw (pd.DataFrame): The sampled exogenous capacity DataFrame.
             file_name (str): Name of the file being sampled.
+
+        Returns:
+            pd.DataFrame: Adjusted exogenous capacity sample.
         """
         # Remove samples with no capacity
-        samples_sw = [df[df["capacity"] > 0].copy() for df in samples_sw]
+        samples_sw = samples_sw[samples_sw["capacity"] > 0].copy()
 
         tech_mapping = {
             "exog_cap_upv.csv": ("upv", "supplycurve_upv.csv"),
@@ -1243,7 +1337,7 @@ class MCS_Sampler:
         class_sc_point_map = self.samples[Sample_ID][["sc_point_gid", "class"]]
         class_sc_point_map = class_sc_point_map.set_index("sc_point_gid").to_dict()["class"]
 
-        # Remove any rows from samples_sw[s] that cannot be mapped
+        # Remove any rows from samples_sw that cannot be mapped
         # These are cases with zero supply in the region
         valid_sc_point_gids = samples_sw["sc_point_gid"].isin(class_sc_point_map.keys())
         samples_sw = samples_sw[valid_sc_point_gids].copy()
@@ -1272,11 +1366,12 @@ class MCS_Sampler:
             dist_files (List[pd.DataFrame]): List of input DataFrames for sampling.
             modifiable_columns (List[str]): List of columns that can be directly multiplied by the weights.
             n_decimals (Dict[str, int]): Dictionary with the number of decimal places for each column.
-            dict_df_weights (Dict[Tuple[int, int], pd.DataFrame]): Dictionary with the weights for each reference file and sample.
+            dict_df_weights (Dict[int, pd.DataFrame]): Dictionary mapping reference file index to
+                the weight DataFrame for that file.
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Update:
-            self.samples (Dict[str, List[pd.DataFrame]]): Dictionary with the samples for each switch/file_name.
+            self.samples (Dict[str, pd.DataFrame]): Dictionary with the samples for each switch/file_name.
         """
 
         Sample_ID = self.sample_group['Sample_ID'][sample_idx]
@@ -1290,7 +1385,6 @@ class MCS_Sampler:
 
         for f, df in enumerate(dist_files):
             samples_sw[modifiable_columns] += df[modifiable_columns] * dict_df_weights[f][modifiable_columns] 
-        # TODO: ok to delete the +1 on rounding here?
         samples_sw = samples_sw.round(n_decimals)
 
         if file_name in MCSConstants.SUPPLY_CURVE_FILES:
@@ -1301,8 +1395,7 @@ class MCS_Sampler:
 
         elif file_name in MCSConstants.PRESCRIBED_BUILDS_FILES:
             # Remove samples with no capacity
-            # TODO: may need to adjust this after removing iteration over samples
-            adjusted_samples = [df[df["capacity"] > 0].copy() for df in samples_sw]
+            adjusted_samples = samples_sw[samples_sw["capacity"] > 0]
 
         else:
             # For all other files we can directly apply the weights
@@ -1325,7 +1418,7 @@ class MCS_Sampler:
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Update:
-            self.samples (Dict[str, List[pd.DataFrame]]): Dictionary with the samples for each switch/file_name.
+            self.samples (Dict[str, pd.DataFrame]): Dictionary with the samples for each switch/file_name.
         """
 
         Sample_ID = self.sample_group['Sample_ID'][sample_idx]
@@ -1347,10 +1440,8 @@ class MCS_Sampler:
         # Round numbers to 9 decimal places and allow a maxium values of 1
         for new_c_r in sample_sw.keys():
             sample_sw[new_c_r] = sample_sw[new_c_r].round(9).clip(0,1)
-        
-        samples_sw.append(pd.DataFrame(sample_sw, index=indexes))
 
-        self.samples[Sample_ID] = samples_sw
+        self.samples[Sample_ID] = pd.DataFrame(sample_sw, index=indexes)
 
     def _apply_weights_switches_csv(
         self,
@@ -1365,12 +1456,12 @@ class MCS_Sampler:
         Args:
             dist_files (List[pd.DataFrame]): List of input DataFrames for sampling.
             n_decimals (Dict[str, int]): Dictionary with the number of decimal places for each column.
-            dict_df_weights (Dict[Tuple[int, int], pd.DataFrame]): Dictionary with the weights for each reference file and sample.
-            #TODO: update dict_df_weights description throughout
+            dict_df_weights (Dict[int, float]): Dictionary mapping reference file/assignment index
+                to the scalar weight for that assignment.
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Update:
-            self.samples (Dict[str, List[pd.DataFrame]]): Dictionary with the samples for each switch/file_name.
+            self.samples (Dict[str, str]): Dictionary with the sampled switch value.
         """
         # Switches are saved only for the rows changed because this allow 
         # multiple json objects changing different switches using different distributions
@@ -1442,7 +1533,6 @@ class MCS_Sampler:
 
         # Get shape of any region’s weight array
         any_region = next(iter(r_weights))
-        # TODO: this probably needs testing
         n_assignments = r_weights[any_region].shape
 
         # Build column names
@@ -1473,9 +1563,21 @@ class MCS_Sampler:
             weight_record_df.to_csv(save_path, mode='a', index=False, header=False)
         else:
             weight_record_df.to_csv(save_path, mode='w', index=False, header=True)
+
     # ----------------------- End of Weight Application Helpers -----------------------
 
     def sample_lhs_uniform(self, sample_num, dim_num, lower, upper):
+        """Draw a sample from a uniform distribution using the LHS quantile matrix.
+
+        Args:
+            sample_num (int): Row index into self.lhs_samples for this run.
+            dim_num (int): Column index (dimension) into self.lhs_samples for this sample group.
+            lower (np.ndarray or float): Lower bound(s) of the uniform distribution.
+            upper (np.ndarray or float): Upper bound(s) of the uniform distribution.
+
+        Returns:
+            np.ndarray or float: Sampled value(s) from the uniform distribution.
+        """
         # check order
         lower_new, upper_new = check_lhs_param_order(lower, upper)
         # set uniform distribution parameters: location (loc) and scale
@@ -1487,6 +1589,18 @@ class MCS_Sampler:
         return lhs_vals
 
     def sample_lhs_triangular(self, sample_num, dim_num, lower, mode, upper):
+        """Draw a sample from a triangular distribution using the LHS quantile matrix.
+
+        Args:
+            sample_num (int): Row index into self.lhs_samples for this run.
+            dim_num (int): Column index (dimension) into self.lhs_samples for this sample group.
+            lower (np.ndarray or float): Lower bound(s) of the triangular distribution.
+            mode (np.ndarray or float): Mode (peak) value(s) of the triangular distribution.
+            upper (np.ndarray or float): Upper bound(s) of the triangular distribution.
+
+        Returns:
+            np.ndarray or float: Sampled value(s) from the triangular distribution.
+        """
         # check order
         lower_new, upper_new = check_lhs_param_order(lower, upper)
         # set triangular distribution parametesr: location (loc), scale, and center (c)
@@ -1497,11 +1611,22 @@ class MCS_Sampler:
         # draw lhs samples; 'sample_num' matches the sample row for the relevant ReEDS run and
         # 'dim_num' matches the relevant column for the dimension
         lhs_vals = triang.ppf(self.lhs_samples[sample_num, dim_num], c=tri_c, loc=tri_loc, scale=tri_scale)
-        # TODO: instead of sample_idx could assing labels for easier matching
         
         return lhs_vals
 
     def sample_lhs_discrete(self, sample_num, dim_num):
+        """Select a discrete option index using the LHS quantile matrix.
+
+        Uses the distribution parameters as unnormalized probabilities to
+        define CDF bins, then maps the LHS quantile to a discrete index.
+
+        Args:
+            sample_num (int): Row index into self.lhs_samples for this run.
+            dim_num (int): Column index (dimension) into self.lhs_samples for this sample group.
+
+        Returns:
+            int: Index of the selected discrete option.
+        """
         # normalize probabilities
         probs = np.array(self.sample_group.dist_params) / np.sum(self.sample_group.dist_params)
         # get CDF bins
@@ -1512,12 +1637,22 @@ class MCS_Sampler:
         return lhs_vals
 
     def apply_lhs_switches_csv(self, sample_group_num, sample_idx, dist_files, n_decimals):
+        """Apply LHS sampling to a switches.csv entry.
+
+        Draws a sample for the switch value based on the configured distribution
+        and stores the result as a string in self.samples.
+
+        Args:
+            sample_group_num (int): Index of the sample group (LHS dimension).
+            sample_idx (int): Index of the Sample_ID in sample_group.
+            dist_files (List[pd.DataFrame]): Reference DataFrames for the switch.
+            n_decimals (int): Number of decimal places for rounding the result.
+        """
         sw_name = self.sample_group['switch_names'][sample_idx]
         samples_sw = [None for n in range(self.n_samples)]
         sw_assignments = self.sample_group['sw_assignments'][sample_idx]
 
         if self.distribution == "triangular":
-            #TODO: add to validation that this has three parameters
             lower, mode, upper = sw_assignments
             # get sample values
             lhs_sw_val = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
@@ -1526,7 +1661,6 @@ class MCS_Sampler:
             # get multipler and apply to switch
             lhs_sw_mult = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
             lhs_sw_val = lhs_sw_mult * sw_assignments[0]
-            # TODO adjust dist parameters for multipler 
         elif self.distribution == "uniform":
             lower, upper = sw_assignments
             # get sample values
@@ -1545,6 +1679,18 @@ class MCS_Sampler:
 
 
     def apply_lhs_general(self, sample_group_num, Sample_ID, dist_files, aux_files, modifiable_columns):
+        """Apply LHS sampling to a general (non-switch, non-RECF) file.
+
+        For each modifiable column, draws values from the configured distribution
+        using the LHS quantile matrix and stores the resulting DataFrame in self.samples.
+
+        Args:
+            sample_group_num (int): Index of the sample group (LHS dimension).
+            Sample_ID (str): Identifier for this sample in self.samples.
+            dist_files (List[pd.DataFrame]): Reference DataFrames providing distribution bounds.
+            aux_files (dict): Auxiliary files dictionary.
+            modifiable_columns (List[str]): Columns to sample new values for.
+        """
         # set up final data
         samples_sw = dist_files[0].copy()
         # iterate over columns to update with lhs 
@@ -1553,51 +1699,24 @@ class MCS_Sampler:
             if self.distribution == "dirichlet":
                 # special case: dirichlet with two or three of the same parameters are 
                 # equivalent to uniform and triangular, respectively
+                self.distribution = check_lhs_settings(self.dist_params, self.sample_group)        
 
-                # TODO: move this out of the loop
-                # TODO: move checking in upstream 
-                if len(self.dist_params) == 2 and len(set(self.dist_params)) == 1:
-                    self.distribution = "uniform"
-                elif len(self.dist_params) == 3 and len(set(self.dist_params)) == 1:
-                    self.distribution = "triangular"
-                else:
-                    error_message = (
-                        "Latin hypercube sampling not supported for dirichlet distributions "
-                        "except for when dist_params are set to [1,1] (uniform) or [1,1,1] (triangular). "
-                        f"Check settings for {self.sample_group['name']}"
-                    )
-                    raise ValueError(error_message)
-                    
+            # note that this is deliberately not an elif as the above block adjusts select dirichlet
+            # distributions to be uniform or triangular as appropriate
             if self.distribution == "triangular":
-                if len(dist_files) != 3:
-                    error_message = (
-                        f"Triangular distributions require 3 parameters but {len(dist_params)} "
-                        f"are specified for {self.sample_group['name']}."
-                    )
-                    raise ValueError(error_message)
-
                 # get triangular distribution parameters (ordering checked in sample_lhs_triangular function)
-                lower = np.array(dist_files[2][mod_col])
+                lower = np.array(dist_files[0][mod_col])
                 mode = np.array(dist_files[1][mod_col])
-                upper = np.array(dist_files[0][mod_col])
-                
+                upper = np.array(dist_files[2][mod_col])                
                 # get new values
                 lhs_vals = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
                 # replace file data with with lhs sample values
                 # for NA values from sampling (occurs if lower == upper), use existing values file values
                 samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
-                    
+            
             elif self.distribution == "uniform":
-                if len(dist_files) != 2:
-                    error_message = (
-                        f"Uniform distributions require 2 parameters but {len(dist_params)} "
-                        f"are specified for {self.sample_group['name']}."
-                    )
-                    raise ValueError(error_message)
-
                 lower = np.array(dist_files[0][mod_col])
                 upper = np.array(dist_files[1][mod_col])
-
                 # get new values
                 lhs_vals = self.sample_lhs_uniform(self.sample_num, sample_group_num, lower, upper)
                 samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
@@ -1606,12 +1725,23 @@ class MCS_Sampler:
                 lhs_index = self.sample_lhs_discrete(self.sample_num, sample_group_num)
                 samples_sw[mod_col] = dist_files[lhs_index][mod_col]
 
-            else:
-                # TODO: add support for multiplicative distributions
-                breakpoint()
+            elif self.distribution == "uniform_multiplier":
+                lower = np.array(dist_files[0][mod_col]) * self.dist_params[0]
+                upper = np.array(dist_files[0][mod_col]) * self.dist_params[1]
+                # get new values
+                lhs_vals = self.sample_lhs_uniform(self.sample_num, sample_group_num, lower, upper)
+                samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
 
+            elif self.distribution == "triangular_multiplier":
+                lower = np.array(dist_files[0][mod_col]) * self.dist_params[0]
+                mode = np.array(dist_files[0][mod_col]) * self.dist_params[1]
+                upper = np.array(dist_files[0][mod_col]) * self.dist_params[2]                
+                # get new values
+                lhs_vals = self.sample_lhs_triangular(self.sample_num, sample_group_num, lower, mode, upper)
+                # replace file data with with lhs sample values
+                # for NA values from sampling (occurs if lower == upper), use existing values file values
+                samples_sw[mod_col] = np.where(np.isnan(lhs_vals), samples_sw[mod_col], lhs_vals)
 
-        # TODO: add adjustments for other files, decimals, etc.
 
         self.samples[Sample_ID] = samples_sw
         # output: dictionary of sample values by filename (see samples_dict)
@@ -1655,11 +1785,8 @@ class MCS_Sampler:
                     pass
                 else:
                     self.apply_lhs_general(sample_group_num, Sample_ID, dist_files, aux_files, modifiable_columns)
-               
             else:
-                # TODO: adapt to enable pure uniform and triangular
                 dict_df_weights = self.weight_calc.get_df_weights(dist_files, modifiable_columns, sw_name, file_name)
-
                 # Dispatch weight application based on file type
                 if file_name == "switches.csv":
                     self._apply_weights_switches_csv(dist_files, n_decimals, dict_df_weights, sample_idx)
