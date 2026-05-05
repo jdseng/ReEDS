@@ -242,6 +242,22 @@ def get_hierarchy_file(inputs_case: str, ReEDS_resolution: str) -> pd.DataFrame:
     return filtered_hierarchy
 
 def check_lhs_settings(dist_params, sample_group):
+    """Check whether a dirichlet distribution can be mapped to a supported LHS distribution.
+
+    Dirichlet distributions with identical parameters of length 2 or 3 are
+    equivalent to uniform or triangular distributions, respectively, which
+    are supported by the LHS sampler.
+
+    Args:
+        dist_params (list): The distribution parameters from the sample group.
+        sample_group (pd.Series): Row of the distribution instructions DataFrame.
+
+    Returns:
+        str: The equivalent distribution name ('uniform' or 'triangular').
+
+    Raises:
+        ValueError: If the dirichlet parameters cannot be mapped to a supported distribution.
+    """
     if len(dist_params) == 2 and len(set(dist_params)) == 1:
         new_distribution = "uniform"
     elif len(dist_params) == 3 and len(set(dist_params)) == 1:
@@ -257,6 +273,15 @@ def check_lhs_settings(dist_params, sample_group):
     return new_distribution
 
 def check_lhs_param_order(lower, upper):
+    """Ensure lower bounds are less than upper bounds, swapping where necessary.
+
+    Args:
+        lower (np.ndarray or float): Lower bound value(s).
+        upper (np.ndarray or float): Upper bound value(s).
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Corrected (lower, upper) arrays.
+    """
     # ensure that lower (loc) < upper (loc + scale)
     lower_new = np.where(lower > upper, upper, lower)
     upper_new = np.where(lower > upper, lower, upper)
@@ -482,7 +507,7 @@ def general_mcs_dist_validation(reeds_path: str, mcs_dist_path: str, sw: pd.Seri
             if distribution in ['triangular', 'uniform']:
                 raise ValueError(
                     f"To implement a uniform or triangular for {sample_group['name']} using random sampling (MCS_lhs=0), "
-                    "set the distribution to 'dirichlet' with dist_params equal to [1,1] or [1,1,1]"
+                    "set the distribution to 'dirichlet' with dist_params equal to [1,1] or [1,1,1]."
                 )
             
 def get_dist_instructions(reeds_path: str, inputs_case: str) -> Tuple[pd.DataFrame, dict]:
@@ -785,7 +810,8 @@ class WeightCalculator:
             file_name (str): Name of the file we are getting the weights for.
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame | float]: Dictionary mapping reference file index to
+                the weight values for that file.
         """
 
         self._validate_inputs(dist_files, sw_name, file_name)
@@ -818,7 +844,8 @@ class WeightCalculator:
             file_name (str): Name of the file we are getting the weights for.
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame | float]: Dictionary mapping reference file index to
+                the weight values for that file.
         """
         # Number of reference files/values. Since all sw_assignments
         # have the same number of files, we can use the first one.
@@ -895,10 +922,11 @@ class WeightCalculator:
             sw_name (str): Name of the switch we are getting the weights for.
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame]: Dictionary mapping reference file index to
+                the weight DataFrame for that file.
         """
         # Dictionary to store computed weights for the modifiable columns
-        # (sample, file) -> pd.DataFrame
+        # file index -> pd.DataFrame
         dict_df_weights = {}
 
         # Store weights to use later in the recf files (CF files)
@@ -961,7 +989,8 @@ class WeightCalculator:
             dist_files (list of pd.DataFrame): List of reference dataframes (ajusted to have the same # of rows)
 
         Returns:
-            dict: Dictionary with the weights for each reference file and sample.
+            Dict[int, pd.DataFrame]: Dictionary mapping reference file index to
+                the weight DataFrame for that file.
         """
         dict_df_weights = {}
         for f, df in enumerate(dist_files):
@@ -1337,11 +1366,12 @@ class MCS_Sampler:
             dist_files (List[pd.DataFrame]): List of input DataFrames for sampling.
             modifiable_columns (List[str]): List of columns that can be directly multiplied by the weights.
             n_decimals (Dict[str, int]): Dictionary with the number of decimal places for each column.
-            dict_df_weights (Dict[Tuple[int, int], pd.DataFrame]): Dictionary with the weights for each reference file and sample.
+            dict_df_weights (Dict[int, pd.DataFrame]): Dictionary mapping reference file index to
+                the weight DataFrame for that file.
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Update:
-            self.samples (Dict[str, List[pd.DataFrame]]): Dictionary with the samples for each switch/file_name.
+            self.samples (Dict[str, pd.DataFrame]): Dictionary with the samples for each switch/file_name.
         """
 
         Sample_ID = self.sample_group['Sample_ID'][sample_idx]
@@ -1388,7 +1418,7 @@ class MCS_Sampler:
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Update:
-            self.samples (Dict[str, List[pd.DataFrame]]): Dictionary with the samples for each switch/file_name.
+            self.samples (Dict[str, pd.DataFrame]): Dictionary with the samples for each switch/file_name.
         """
 
         Sample_ID = self.sample_group['Sample_ID'][sample_idx]
@@ -1426,12 +1456,12 @@ class MCS_Sampler:
         Args:
             dist_files (List[pd.DataFrame]): List of input DataFrames for sampling.
             n_decimals (Dict[str, int]): Dictionary with the number of decimal places for each column.
-            dict_df_weights (Dict[Tuple[int, int], pd.DataFrame]): Dictionary with the weights for each reference file and sample.
-            #TODO: update dict_df_weights description throughout
+            dict_df_weights (Dict[int, float]): Dictionary mapping reference file/assignment index
+                to the scalar weight for that assignment.
             sample_idx (int): Index of the Sample_ID in sample_group.
 
         Update:
-            self.samples (Dict[str, List[pd.DataFrame]]): Dictionary with the samples for each switch/file_name.
+            self.samples (Dict[str, str]): Dictionary with the sampled switch value.
         """
         # Switches are saved only for the rows changed because this allow 
         # multiple json objects changing different switches using different distributions
@@ -1537,6 +1567,17 @@ class MCS_Sampler:
     # ----------------------- End of Weight Application Helpers -----------------------
 
     def sample_lhs_uniform(self, sample_num, dim_num, lower, upper):
+        """Draw a sample from a uniform distribution using the LHS quantile matrix.
+
+        Args:
+            sample_num (int): Row index into self.lhs_samples for this run.
+            dim_num (int): Column index (dimension) into self.lhs_samples for this sample group.
+            lower (np.ndarray or float): Lower bound(s) of the uniform distribution.
+            upper (np.ndarray or float): Upper bound(s) of the uniform distribution.
+
+        Returns:
+            np.ndarray or float: Sampled value(s) from the uniform distribution.
+        """
         # check order
         lower_new, upper_new = check_lhs_param_order(lower, upper)
         # set uniform distribution parameters: location (loc) and scale
@@ -1548,6 +1589,18 @@ class MCS_Sampler:
         return lhs_vals
 
     def sample_lhs_triangular(self, sample_num, dim_num, lower, mode, upper):
+        """Draw a sample from a triangular distribution using the LHS quantile matrix.
+
+        Args:
+            sample_num (int): Row index into self.lhs_samples for this run.
+            dim_num (int): Column index (dimension) into self.lhs_samples for this sample group.
+            lower (np.ndarray or float): Lower bound(s) of the triangular distribution.
+            mode (np.ndarray or float): Mode (peak) value(s) of the triangular distribution.
+            upper (np.ndarray or float): Upper bound(s) of the triangular distribution.
+
+        Returns:
+            np.ndarray or float: Sampled value(s) from the triangular distribution.
+        """
         # check order
         lower_new, upper_new = check_lhs_param_order(lower, upper)
         # set triangular distribution parametesr: location (loc), scale, and center (c)
@@ -1562,6 +1615,18 @@ class MCS_Sampler:
         return lhs_vals
 
     def sample_lhs_discrete(self, sample_num, dim_num):
+        """Select a discrete option index using the LHS quantile matrix.
+
+        Uses the distribution parameters as unnormalized probabilities to
+        define CDF bins, then maps the LHS quantile to a discrete index.
+
+        Args:
+            sample_num (int): Row index into self.lhs_samples for this run.
+            dim_num (int): Column index (dimension) into self.lhs_samples for this sample group.
+
+        Returns:
+            int: Index of the selected discrete option.
+        """
         # normalize probabilities
         probs = np.array(self.sample_group.dist_params) / np.sum(self.sample_group.dist_params)
         # get CDF bins
@@ -1572,6 +1637,17 @@ class MCS_Sampler:
         return lhs_vals
 
     def apply_lhs_switches_csv(self, sample_group_num, sample_idx, dist_files, n_decimals):
+        """Apply LHS sampling to a switches.csv entry.
+
+        Draws a sample for the switch value based on the configured distribution
+        and stores the result as a string in self.samples.
+
+        Args:
+            sample_group_num (int): Index of the sample group (LHS dimension).
+            sample_idx (int): Index of the Sample_ID in sample_group.
+            dist_files (List[pd.DataFrame]): Reference DataFrames for the switch.
+            n_decimals (int): Number of decimal places for rounding the result.
+        """
         sw_name = self.sample_group['switch_names'][sample_idx]
         samples_sw = [None for n in range(self.n_samples)]
         sw_assignments = self.sample_group['sw_assignments'][sample_idx]
@@ -1603,6 +1679,18 @@ class MCS_Sampler:
 
 
     def apply_lhs_general(self, sample_group_num, Sample_ID, dist_files, aux_files, modifiable_columns):
+        """Apply LHS sampling to a general (non-switch, non-RECF) file.
+
+        For each modifiable column, draws values from the configured distribution
+        using the LHS quantile matrix and stores the resulting DataFrame in self.samples.
+
+        Args:
+            sample_group_num (int): Index of the sample group (LHS dimension).
+            Sample_ID (str): Identifier for this sample in self.samples.
+            dist_files (List[pd.DataFrame]): Reference DataFrames providing distribution bounds.
+            aux_files (dict): Auxiliary files dictionary.
+            modifiable_columns (List[str]): Columns to sample new values for.
+        """
         # set up final data
         samples_sw = dist_files[0].copy()
         # iterate over columns to update with lhs 
