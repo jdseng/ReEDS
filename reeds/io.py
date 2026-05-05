@@ -103,9 +103,9 @@ def get_hierarchy(case=None, original=False, **kwargs):
     """Get hierarchy for ReEDs case if provided, or for country if case not provided"""
     if case:
         if original:
-            filepath = Path(case, 'inputs_case', 'hierarchy_original.csv')
+            filepath = Path(standardize_case(case), 'inputs_case', 'hierarchy_original.csv')
         else:
-            filepath = Path(case, 'inputs_case', 'hierarchy.csv')
+            filepath = Path(standardize_case(case), 'inputs_case', 'hierarchy.csv')
     else:
         ## TEMPORARY 20260402: Use deprecated hierarchy inputs.
         ## Use the line below once we make the switch:

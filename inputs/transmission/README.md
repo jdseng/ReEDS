@@ -38,9 +38,23 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
     reeds.inputs.get_itls(GSw_ZoneSet=GSw_ZoneSet)
     ```
 
-- `transmission_capacity_future_(ba|county)_baseline.csv` (DEPRECATED): Historically installed (since 2010) and currently planned transmission capacity additions at 134-zone resolution.
-To be replaced with ITL-based estimates of the impacts of planned tranches of transmission system additions.
+- `newlinks_offshore_backbone.csv`: Candidate connections between offshore zones
+  - Similarly formatted files for candidate connections between offshore and coastal land-based zones are found at `inputs/zones/{GSw_ZoneSet}/newlinks_offshore_radial.csv`
 
-- `transmission_capacity_future_(ba|county)_{GSw_TransScen}.csv`: Available future routes for transmission capacity as specified by `GSw_TransScen`.
+- `planned_lines-*.csv`: Individual planned transmission projects
+  - `default`: Included in all runs
+    - TransWest Express: Planned online date and capacity from [CAISO 2026](https://www.caiso.com/documents/ceo-report-mar-2026.pdf); route from [TransWest Express](https://www.transwestexpress.net/about/maps.shtml)
+  - `NTP_MT`: Lines used in the "MT" scenario of the [NTP Study](https://www.energy.gov/oe/national-transmission-planning-study-0)
+  - `NTP_P2P`: Lines used in the "P2P" scenario of the [NTP Study](https://www.energy.gov/oe/national-transmission-planning-study-0)
 
-- `transmission_cost_dc_(ba|county).csv`: Same as `transmission_cost_ac_500kv_(ba|county).csv` except assuming a 500 kV bipole DC line.
+- `transmission_cost_distance.csv`: Cost [USD2024] and distance [miles] for greenfield interzonal single-circuit transmission lines of the specified polarity (AC or DC) and voltage [kV] between nodes of the specified zone hashes
+  - Node locations are described in `inputs/zones/README.md` and found in the `inputs/zones/{GSw_ZoneSet}/zonehash.csv` files
+  - Least-cost paths between nodes (and integrated land/terrain-dependent costs along those paths) are determined using the [reV Routing (reVRt) model](https://github.com/NatLabRockies/reVRt)
+  - Technical assumptions:
+    - The underlying cost model is built using the MISO 2025 Transmission Cost Estimation Guide ([parent page](https://www.misoenergy.org/planning/transmission-planning/mtep), [description](https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP25337433.pdf), [data workbook](https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimate%20Workbook%20for%20MTEP25547535.xlsx))
+    - Costs for DC connections assume a 500 kV bipole architecture
+    - Costs for AC connections use interface-dependent voltage assumptions.
+    The voltage is given by the maximum voltage of an existing transmission line between the pair of zones defining the interface (using the same [NARIS](https://www.nrel.gov/docs/fy21osti/79224.pdf) dataset described above), with a floor of 138 kV.
+
+- `transmission_cost_ac_500kv_z134.h5`: Example file illustrating the required format when using the transmission upgrade supply curve ([TSC](https://github.nrel.gov/ReEDS/TSC)) method for `GSw_ZoneSet = z134`
+  - The full method is not yet supported; when implemented, it will only be supported for a limited number of `GSw_ZoneSet` definitions

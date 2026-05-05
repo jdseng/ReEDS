@@ -639,9 +639,9 @@ def _make_line(row):
     return shapely.LineString([[row.from_lon, row.from_lat], [row.to_lon, row.to_lat]])
 
 
-def get_hvdc_lines():
+def get_hvdc_lines(filename='hvdc_lines.csv'):
     """Load data for individual HVDC lines"""
-    datapath = Path(reeds.io.reeds_path, 'inputs', 'transmission', 'hvdc_lines.csv')
+    datapath = Path(reeds.io.reeds_path, 'inputs', 'transmission', filename)
     dfdc = pd.read_csv(datapath)
     dfdc['geometry'] = dfdc.apply(_make_line, axis=1)
     dfdc = gpd.GeoDataFrame(dfdc, crs='EPSG:4326')
@@ -650,16 +650,23 @@ def get_hvdc_lines():
     return dfdc
 
 
-def map_hvdc_lines_to_interfaces(case=None, **kwargs) -> pd.DataFrame:
+def map_hvdc_lines_to_interfaces(case=None, filename='hvdc_lines.csv', **kwargs) -> pd.DataFrame:
     """
     Assign HVDC line capacity to interfaces by mapping start/end points to zones
 
     Inputs for testing:
         case = None
-        kwargs = {'GSw_ZoneSet': 'z90'}
+        kwargs = {'GSw_ZoneSet': 'z132'}
+        for filename in [
+            'hvdc_lines.csv',
+            'planned_lines-baseline.csv',
+            'planned_lines-NTP_MT.csv',
+            'planned_lines-NTP_P2P.csv',
+        ]:
+            map_hvdc_lines_to_interfaces(case=case, filename=filename, kwargs=kwargs)
     """
-    dfzones = get_zones(case, **kwargs)
-    dfdc = get_hvdc_lines().to_crs(dfzones.crs)
+    dfzones = get_zones(reeds.io.standardize_case(case), **kwargs)
+    dfdc = get_hvdc_lines(filename=filename).to_crs(dfzones.crs)
     for i, side in enumerate(['from', 'to']):
         dfdc[f'zone_{side}'] = gpd.sjoin(
             dfdc.set_geometry(f'{side}_latlon').set_crs('EPSG:4326').to_crs(dfzones.crs),
@@ -675,7 +682,11 @@ def map_hvdc_lines_to_interfaces(case=None, **kwargs) -> pd.DataFrame:
     for index, row in dfcap.iterrows():
         for side, r in enumerate(['r', 'rr']):
             dfcap.loc[index, r] = sorted(row[['r','rr']])[side]
-    dfout = dfcap.groupby(['r','rr'])[['name','MW']].agg({'MW':sum, 'name':list})
+    dfout = (
+        dfcap
+        .groupby(['r', 'rr', 'trtype', 'year_online', 'certain'])
+        [['name', 'MW']].agg({'MW':sum, 'name':list})
+    )
     return dfout
 
 

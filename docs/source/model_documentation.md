@@ -2041,8 +2041,8 @@ Existing HVDC connections (all of which use LCC at the time of this writing) are
 
 ```{admonition} HVDC scenarios
 - Additional candidate point-to-point HVDC connections can be allowed using the `GSw_TransScen` switch.
-For example, the point-to-point connections shown in {numref}`figure-transmission-lcc-vsc` can be enabled by setting `GSw_TransScen=LCC_1000miles_demand1_wind1_subferc_20230629`.
-- Multiterminal HVDC expansion can be turned on by setting `GSw_TransScen=VSC_all`.
+For example, the point-to-point connections shown in {numref}`figure-transmission-lcc-vsc` can be enabled by setting `GSw_TransScen=NTP_P2P`.
+- Multiterminal HVDC expansion can be turned on by setting `GSw_TransScen=NTP_MT`.
 ```
 
 
