@@ -134,6 +134,61 @@ def get_trancap_init(case, networksource='NARIS2024', level='r'):
     return dfout.rename(columns={'r':level, 'rr':levell})
 
 
+def get_firm_import_limit(inputs_case):
+    """Limits on PRMTRADE across nercr boundaries"""
+    sw = reeds.io.get_switches(inputs_case)
+    if not int(sw.GSw_PRM_NetImportLimit):
+        ## No limit
+        firm_import_limit = pd.DataFrame(columns=['*nercr','t','fraction']).set_index(['*nercr','t'])
+    else:
+        limits = pd.Series(
+            {int(i.split('_')[0]): i.split('_')[1] for i in sw.GSw_PRM_NetImportLimitScen.split('/')}
+        )
+
+        solveyears = pd.read_csv(
+            os.path.join(inputs_case,'modeledyears.csv')
+        ).columns.astype(int).tolist()
+        startyear = min(solveyears)
+        endyear = max(solveyears)
+        allyears = range(startyear, max(endyear, limits.index.max())+1)
+
+        ## calculate the historical net_firm_import fraction for each region and drop negative values
+        peak_net_imports = pd.read_csv(
+            os.path.join(inputs_case,'peak_net_imports.csv'),
+            index_col=['nercr']
+        )
+        net_firm_import_frac = (
+            peak_net_imports.MW / peak_net_imports.MW_TotalDemand
+        ).clip(lower=0)
+        nercrs = net_firm_import_frac.index
+
+        _dfout = {}
+        for key, val in limits.items():
+            ## If 'hist' is in GSw_PRM_NetImportLimitScen,
+            ## all years up until that year use the historical regional max
+            if val == 'hist':
+                for y in range(startyear, key+1):
+                    _dfout[y] = net_firm_import_frac
+            ## If 'histmax', all prior years use the historical max across all regions
+            elif val == 'histmax':
+                for y in range(startyear, key+1):
+                    _dfout[y] = net_firm_import_frac.clip(lower=net_firm_import_frac.max())
+            else:
+                ## Input values are percentages so convert to fractions
+                _dfout[key] = pd.Series(index=nercrs, data=float(val) / 100)
+
+        firm_import_limit = (
+            pd.concat(_dfout, names=('t',)).unstack('nercr')
+            ## Linear interpolation between values; flat projections before and after
+            .reindex(allyears).interpolate('linear').bfill().ffill()
+            .loc[solveyears]
+            .unstack('t').rename('fraction').rename_axis(['*nercr','t'])
+        )
+
+    return firm_import_limit
+
+
+
 def calculate_adjacent_routes(dfzones):
     routes_adjacent = dfzones.copy()
     routes_adjacent['r_adj'] = routes_adjacent.apply(
@@ -220,54 +275,7 @@ def calculate_co2_storage_routes(dfzones, co2_storage_sites):
 ### ===========================================================================
 
 #%% Limits on PRMTRADE across nercr boundaries
-if not int(sw.GSw_PRM_NetImportLimit):
-    ## No limit
-    firm_import_limit = pd.DataFrame(columns=['*nercr','t','fraction']).set_index(['*nercr','t'])
-else:
-    limits = pd.Series(
-        {int(i.split('_')[0]): i.split('_')[1] for i in sw.GSw_PRM_NetImportLimitScen.split('/')}
-    )
-
-    solveyears = pd.read_csv(
-        os.path.join(inputs_case,'modeledyears.csv')
-    ).columns.astype(int).tolist()
-    startyear = min(solveyears)
-    endyear = max(solveyears)
-    allyears = range(startyear, max(endyear, limits.index.max())+1)
-
-    ## calculate the historical net_firm_import fraction for each region and drop negative values
-    peak_net_imports = pd.read_csv(
-        os.path.join(inputs_case,'peak_net_imports.csv'),
-        index_col=['nercr']
-    )
-    net_firm_import_frac = (
-        peak_net_imports.MW / peak_net_imports.MW_TotalDemand
-    ).clip(lower=0)
-    nercrs = net_firm_import_frac.index
-
-    _dfout = {}
-    for key, val in limits.items():
-        ## If 'hist' is in GSw_PRM_NetImportLimitScen,
-        ## all years up until that year use the historical regional max
-        if val == 'hist':
-            for y in range(startyear, key+1):
-                _dfout[y] = net_firm_import_frac
-        ## If 'histmax', all prior years use the historical max across all regions
-        elif val == 'histmax':
-            for y in range(startyear, key+1):
-                _dfout[y] = net_firm_import_frac.clip(lower=net_firm_import_frac.max())
-        else:
-            ## Input values are percentages so convert to fractions
-            _dfout[key] = pd.Series(index=nercrs, data=float(val) / 100)
-
-    firm_import_limit = (
-        pd.concat(_dfout, names=('t',)).unstack('nercr')
-        ## Linear interpolation between values; flat projections before and after
-        .reindex(allyears).interpolate('linear').bfill().ffill()
-        .loc[solveyears]
-        .unstack('t').rename('fraction').rename_axis(['*nercr','t'])
-    )
-
+firm_import_limit = get_firm_import_limit(inputs_case)
 firm_import_limit.to_csv(os.path.join(inputs_case, 'firm_import_limit.csv'))
 
 
