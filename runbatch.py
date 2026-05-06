@@ -1432,8 +1432,8 @@ def write_batch_script(
                 f'r=$(python {os.path.join(casedir, "reeds", "get_last_iter.py")} {batch_case} {max(solveyears)})\n'
                 if LINUXORMAC else
                 f'for /f "delims=" %%i in '
-                f'(\'python {os.path.join(casedir, "reeds", "get_last_iter.py")} {batch_case} {max(solveyears)}\')' 
-                f'do set "r=%%i"\n'
+                f'(\'python {os.path.join(casedir, "reeds", "get_last_iter.py")} {batch_case} {max(solveyears)}\')'
+                f' do set "r=%%i"\n'
             )
         OPATH.writelines(
             "gams e_report.gms"
