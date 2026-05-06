@@ -30,7 +30,7 @@ def get_last_g00(batch_case, max_year):
     )
     
     # Use forward slashes universally, works on both OS
-    print(Path('g00files') / last_file.name)
+    print((Path('g00files') / last_file.name).as_posix())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Get the last iteration g00 file for a given batch case.')
