@@ -3919,7 +3919,7 @@ parameter cost_prod(i,v,r,t)                  "--$/metric ton/hr-- cost or benef
 scalar    h2_combustion_intensity              "--metric tons/MMBtu-- amount of hydrogen consumed per MMBtu of H2-Combustion fuel consumption" ;
 
 parameter pipeline_distance(r,rr) "--miles-- distance between all adjacent BA centroids for pipeline investments" ;
-pipeline_distance(r,rr) = distance(r,rr,"AC") ;
+pipeline_distance(r,rr) = distance(r,rr,"VSC") ;
 
 * For smr consume_char0 has capital costs in $/(kg/day) and "ele_efficiency" of kWh/kg
 * convert to $/MW by [$/(kg/day)] / [kwh/kg] * [1000 kWh/MWh] * [24 hr/day]
@@ -6542,14 +6542,9 @@ $include inputs_case%ds%r_cs_distance_mi.csv
 $offdelim
 $ondigit
 $onlisting
-/ ,
-          min_co2_spurline_distance     "--mi-- minimum distance for a spur line (used to provide a floor for pipeline distances in r_cs_distance)"
+/
 ;
 $offempty
-
-* Wherever BA centroids fall within formation boundaries, assume some average spur line distance to connect a CCS or DAC plant with an injection site
-min_co2_spurline_distance = 20 ;
-r_cs_distance(r,cs)$[r_cs_distance(r,cs) < min_co2_spurline_distance] = min_co2_spurline_distance ;
 
 * Assign spurline costs
 cost_co2_spurline_cap(r,cs,t)$[r_cs(r,cs)$tmodel_new(t)] = Sw_CO2_spurline_cost * r_cs_distance(r,cs) ;
@@ -6558,7 +6553,7 @@ cost_co2_spurline_cap(r,cs,t)$[r_cs(r,cs)$tmodel_new(t)] = Sw_CO2_spurline_cost 
 cost_co2_pipeline_cap(r,rr,t)$[routes_adjacent(r,rr)$tmodel_new(t)] = Sw_CO2_pipeline_cost * pipeline_distance(r,rr) ;
 cost_co2_pipeline_fom(r,rr,t)$[routes_adjacent(r,rr)$tmodel_new(t)] = Sw_CO2_pipeline_fom * pipeline_distance(r,rr) ;
 
-co2_routes(r,rr)$routes_adjacent(r,rr) = yes ;
+co2_routes(r,rr)$[routes_adjacent(r,rr)$pipeline_distance(r,rr)] = yes ;
 
 $onempty
 table co2_char(cs,*) "co2 site characteristics including injection rate limit, total storage limit, and break even cost"

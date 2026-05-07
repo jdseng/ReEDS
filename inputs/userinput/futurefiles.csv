@@ -87,7 +87,6 @@ csapr_group2_ex.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 csapr_ozone_season.csv,.csv,0,None,wide,"st,csapr_cat",1,0,constant,None,None,done,constant
 csp.h5,.h5,1,None,9999,None,9999,0,constant,None,None,new,
 ctt.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
-ctus_r_cs_spurlines_200mi.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 currency_incentives.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 d_szn_1yr.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 d_szn_7yr.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
