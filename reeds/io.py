@@ -209,16 +209,19 @@ def get_zonemap(case=None, exclude_water_areas=False, crs='ESRI:102008'):
                               'agglevel': 'ba',
                               }
 
+    ### TEMPORARY 20260507: Get z134 node locations
+    endpoints = reeds.plots.df2gdf(
+        assemble_hierarchy(GSw_ZoneSet='z134').set_index('r'),
+        lat='node_lat', lon='node_lon', crs=crs,
+    )
+    endpoints['x'] = endpoints.centroid.x
+    endpoints['y'] = endpoints.centroid.y
+
     # Mixed resolution procedure
     if agglevel_variables['lvl'] == 'mult':
         ### Model zones
+        ### TEMPORARY 20260507: Get z134 model zones and node locations
         dfba = gpd.read_file(os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_PCA'))
-        ### Use transmission endpoints from reV
-        endpoints = gpd.read_file(
-            os.path.join(reeds_path, 'inputs', 'shapefiles', 'transmission_endpoints')
-        ).set_index('ba_str')
-        endpoints['x'] = endpoints.centroid.x
-        endpoints['y'] = endpoints.centroid.y
 
         dfba['x'] = dfba['rb'].map(endpoints.x)
         dfba['y'] = dfba['rb'].map(endpoints.y)
@@ -289,17 +292,10 @@ def get_zonemap(case=None, exclude_water_areas=False, crs='ESRI:102008'):
                 os.path.join(reeds_path, 'inputs', 'shapefiles', 'US_PCA')
             ).set_index('rb').to_crs(crs)[['geometry']].copy()
             ## Add transmission endpoints
-            endpoints = (
-                gpd.read_file(
-                    os.path.join(reeds_path, 'inputs', 'shapefiles', 'transmission_endpoints')
-                )
-                .set_index('ba_str')
-                .rename(columns={'lon':'node_longitude','lat':'node_latitude'})
-                [['node_longitude','node_latitude','geometry']]
+            dfba = dfba.merge(
+                endpoints[['x', 'y', 'node_lat', 'node_lon']],
+                left_index=True, right_index=True,
             )
-            endpoints['x'] = endpoints.centroid.x
-            endpoints['y'] = endpoints.centroid.y
-            dfba = dfba.merge(endpoints.drop(columns='geometry'), left_index=True, right_index=True)
             ## Add offshore zones (transmission endpoints already included)
             if int(sw.GSw_OffshoreZones):
                 offshore_zones = gpd.read_file(
@@ -308,8 +304,8 @@ def get_zonemap(case=None, exclude_water_areas=False, crs='ESRI:102008'):
                 ## Get node x/y for consistency with land-based zones
                 xy = reeds.plots.df2gdf(
                     offshore_zones.drop(columns='geometry'),
-                    lat='node_latitude',
-                    lon='node_longitude',
+                    lat='node_lat',
+                    lon='node_lon',
                     crs=crs,
                 )
                 offshore_zones['x'] = xy.geometry.x

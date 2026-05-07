@@ -1742,13 +1742,12 @@ def plot_prmtrade(
     dfba = dfba.loc[val_r].copy()
 
     if sw.get('GSw_RegionResolution', 'ba') != 'county':
-        endpoints = (
-            gpd.read_file(os.path.join(reeds_path,'inputs','shapefiles','transmission_endpoints'))
-            .set_index('ba_str'))
-        endpoints['x'] = endpoints.centroid.x
-        endpoints['y'] = endpoints.centroid.y
-        dfba['x'] = dfba.index.map(endpoints.x)
-        dfba['y'] = dfba.index.map(endpoints.y)
+        endpoints = reeds.plots.df2gdf(
+            reeds.io.assemble_hierarchy(case).set_index('r'),
+            lat='node_lat', lon='node_lon',
+        )
+        dfba['x'] = dfba.index.map(endpoints.centroid.x)
+        dfba['y'] = dfba.index.map(endpoints.centroid.y)
 
     ### Get scaling and layout
     _vmax = dfplot.MW.abs().max() if vmax in [None, 0, 0.] else vmax
