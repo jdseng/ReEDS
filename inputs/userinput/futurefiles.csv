@@ -457,10 +457,6 @@ trans_cap_cost_mult_noITC.csv,.csv,1,None,*t,None,0,0,constant,None,None,handled
 trans_cap_cost_mult.csv,.csv,1,None,*t,None,0,0,constant,None,None,handled in calc_financial_inputs.py,constant
 trans_intra_cost_adder.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 trans_itc_fractions.csv,.csv,1,None,9999,None,9999,0,constant,None,None,constant or expire?,constant
-transmission_capacity_future_baseline.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
-transmission_capacity_future.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
-transmission_cost_ac.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
-transmission_cost_dc.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
 transmission_distance_cost_500kVac.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 transmission_distance_cost_500kVdc.csv,.csv,1,None,9999,None,9999,0,constant,None,None,new,
 transmission_distance.csv,.csv,1,None,9999,None,9999,0,constant,None,None,done,constant
