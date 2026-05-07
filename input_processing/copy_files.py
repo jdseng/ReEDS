@@ -610,67 +610,7 @@ def subset_to_valid_regions(
             val_st=val_st_ba,
             filename=filename
         )
-
-
-        # Transmission files need to be filtered differently to allow interfaces between BA and county resolution regions
-        transmission_files = [
-            'transmission_cost_ac.csv',
-            'transmission_cost_dc.csv',
-            'transmission_distance.csv',
-        ]
-
-        if filename in transmission_files:
-            # Filter county data to include regions being solved at both BA and county resolution
-            df_county = filter_data(
-                df_county,
-                region_col,
-                fix_cols,
-                levels,
-                val_r_all,
-                valid_regions,
-                val_st,
-                filename=filename
-            )
-            # Assign the counties that are not being solved at county resolution to the correct BA
-            tx_region_col = '*r' if '*r' in df_county.columns.values else 'r'
-            for idx, region in df_county[tx_region_col].items():
-                if region not in agglevel_variables['county_regions']:
-                    df_county.loc[idx, tx_region_col] = agglevel_variables['BA_2_county'][df_county.loc[idx,tx_region_col]]
-
-            for idx,region in df_county['rr'].items():
-                if region not in agglevel_variables['county_regions']:
-                    df_county.loc[idx, 'rr'] = agglevel_variables['BA_2_county'][df_county.loc[idx, 'rr']]
-            # Drop if *r and rr are same region
-            df_county = df_county.drop(df_county[df_county[tx_region_col]==df_county['rr']].index)
-            # Drop if line is BA-to-BA
-            drop_list = []
-            for idx,region in df_county.iterrows():
-                if (
-                    (region[tx_region_col] in agglevel_variables['ba_regions'])
-                    and (region['rr'] in agglevel_variables['ba_regions'])
-                ):
-                    drop_list.append(idx)
-
-            df_county = df_county.drop(drop_list)
-            # Group lines going between same BA and county
-            if 'distance' in filename:
-                df_county = df_county.groupby([tx_region_col,'rr'] + fix_cols).mean().reset_index()
-            elif 'cost_ac' in filename:
-                df_county = df_county.groupby([tx_region_col,'rr'] + fix_cols).sum().reset_index()
-                # Drop reverse interfaces
-                # Keep only the interface where the first region is alphabetically first
-                df_county['region_pair'] = df_county.apply(
-                    lambda x: '||'.join(sorted([x[tx_region_col], x['rr']])), axis=1)
-                df_county = df_county.sort_values(by=['region_pair','tscbin'])
-                df_county = df_county.drop_duplicates(subset=['region_pair','tscbin'], keep='first')
-                df_county = df_county.drop(columns=['region_pair'])
-            else:
-                df_county = df_county.groupby([tx_region_col,'rr'] + fix_cols).sum().reset_index()
-
-            df_county['interface'] = df_county[tx_region_col] + '||'+df_county['rr']
-            df_county.reset_index(drop=True,inplace=True)
-
-        else:
+        if True:
             # Filter function parameters to only include county resolution regions
             valid_regions_county = {level: (hier[hier['r']
                                     .isin(agglevel_variables['county_regions'])][level].unique()) for level in levels}

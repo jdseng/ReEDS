@@ -108,7 +108,6 @@ def get_trancap_init(case, interface_params, level='r'):
     dfout = (
         dfout
         .rename(columns={'r':level, 'rr':levell})
-        .rename(columns={level:'*'+level})
         .round(3)
     )
     return dfout
@@ -221,7 +220,7 @@ def get_trancap_fut(case):
             'status': {0:'possible', 1:'certain'}
         })
         [['r', 'rr', 'status', 'trtype', 't', 'MW']]
-        .rename(columns={'r':'*r'}).astype({'t':int}).round(3)
+        .astype({'t':int}).round(3)
     )
 
     return trancap_fut
@@ -255,7 +254,6 @@ def get_transmission_fom(case, interface_params):
         .set_index(['r','rr','trtype'])
         .USDperMWyear
         .round(2)
-        .rename_axis(('*r','rr','trtype'))
     )
     return transmission_line_fom
 
@@ -265,7 +263,7 @@ def get_firm_import_limit(case):
     sw = reeds.io.get_switches(case)
     if not int(sw.GSw_PRM_NetImportLimit):
         ## No limit
-        firm_import_limit = pd.DataFrame(columns=['*nercr','t','fraction']).set_index(['*nercr','t'])
+        firm_import_limit = pd.DataFrame(columns=['nercr','t','fraction']).set_index(['nercr','t'])
     else:
         limits = pd.Series(
             {int(i.split('_')[0]): i.split('_')[1] for i in sw.GSw_PRM_NetImportLimitScen.split('/')}
@@ -308,10 +306,10 @@ def get_firm_import_limit(case):
             ## Linear interpolation between values; flat projections before and after
             .reindex(allyears).interpolate('linear').bfill().ffill()
             .loc[solveyears]
-            .unstack('t').rename('fraction').rename_axis(['*nercr','t'])
+            .unstack('t').rename('fraction')
         )
 
-    return firm_import_limit
+    return firm_import_limit.reset_index()
 
 
 def convert_to_tsc(interface_params, dollar_year=2004):
@@ -377,13 +375,14 @@ def get_hurdle_rates(case, hurdle_level=1):
     sw = reeds.io.get_switches(case)
     cost_hurdle_intra = (
         pd.read_csv(Path(reeds.io.reeds_path, 'inputs', 'transmission', 'cost_hurdle_intra.csv'))
-        .rename(columns={'t':'*t'}).set_index('*t').round(3)
+        .set_index('t').round(3)
     )
     cost_hurdle_rate = (
-        cost_hurdle_intra[sw[f'GSw_TransHurdleLevel{hurdle_level}']] if int(sw.GSw_TransHurdleRate)
-        else pd.Series(name='region').rename_axis('*t')
+        cost_hurdle_intra[sw[f'GSw_TransHurdleLevel{hurdle_level}']].rename('USDperMWh')
+        if int(sw.GSw_TransHurdleRate)
+        else pd.Series(name='USDperMWh').rename_axis('t')
     )
-    return cost_hurdle_rate
+    return cost_hurdle_rate.reset_index()
 
 
 def calculate_adjacent_routes(case):
@@ -407,8 +406,8 @@ def calculate_adjacent_routes(case):
         routes_adjacent.drop(columns='geometry')
         .explode('r_adj')
         .reset_index(names=['r'])
-        .rename(columns={'r': '*r', 'r_adj': 'rr'})
-        [['*r', 'rr']]
+        .rename(columns={'r_adj': 'rr'})
+        [['r', 'rr']]
         .dropna()
     )
 
@@ -429,10 +428,10 @@ def get_pipeline_cost_mult(case, interface_params, transmission_cost_nonac):
         )
         pipeline_cost_mult = (
             (dc_cost_permile.rename('multiplier') / dc_cost_permile.min() - 1)
-            .reset_index().rename(columns={'r':'*r'}).round(3)
+            .reset_index().round(3)
         )
     else:
-        pipeline_cost_mult = pd.DataFrame(columns=['*r','rr','multiplier'])
+        pipeline_cost_mult = pd.DataFrame(columns=['r','rr','multiplier'])
     return pipeline_cost_mult
 
 
@@ -451,7 +450,7 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
             crs=dfzones.crs
         )
         [['geometry']]
-        .rename_axis(index='*r')
+        .rename_axis(index='r')
         .reset_index()
     )
     region_centroids['cs'] = region_centroids.apply(
@@ -480,7 +479,7 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
                 .shortest_line(gpd.GeoSeries(x['geometry_site']))
             )
         )
-        [['*r', 'cs', 'geometry']]
+        [['r', 'cs', 'geometry']]
     )
     routes_cs = gpd.GeoDataFrame(routes_cs, geometry='geometry', crs=dfzones.crs)
     routes_cs = routes_cs.loc[(
@@ -503,11 +502,9 @@ def main(case):
 
     interface_params = get_interface_params(case)
 
-    outputs['transmission_distance'] = (
-        interface_params.miles.round(3).reset_index().rename(columns={'r':'*r'})
-    )
-    outputs['tranloss'] = interface_params['loss'].reset_index().round(5).rename(columns={'r':'*r'})
-    outputs['transmission_line_fom'] = get_transmission_fom(case, interface_params)
+    outputs['transmission_miles'] = interface_params[['r','rr','trtype','miles']].round(3)
+    outputs['tranloss'] = interface_params[['r','rr','trtype','loss']].round(5)
+    outputs['transmission_line_fom'] = get_transmission_fom(case, interface_params).reset_index()
     outputs['trancap_fut'] = get_trancap_fut(case)
 
     for hurdle_level in [1, 2]:
@@ -527,12 +524,12 @@ def main(case):
     # trancap_itlgrp = trancap_init['energy'].copy()
     # ## Map counties to itlgrp's
     # hierarchy_itlgrp = pd.read_csv(Path(inputs_case, 'hierarchy_itlgrp.csv'))
-    # itl_d = dict(zip(hierarchy_itlgrp['*r'], hierarchy_itlgrp['itlgrp']))
+    # itl_d = dict(zip(hierarchy_itlgrp['r'], hierarchy_itlgrp['itlgrp']))
     # for r in ['r', 'rr']:
     #     trancap_itlgrp[r] = trancap_itlgrp[r].map(lambda x: itl_d.get(x,x))
     # outputs['trancap_itlgrp'] = (
     #     trancap_itlgrp
-    #     .rename(columns={'r':'*itlgrp', 'rr':'itlgrpp'}).round(3)
+    #     .rename(columns={'r':'itlgrp', 'rr':'itlgrpp'}).round(3)
     # )
 
     ### Transmission upgrade supply curve
@@ -545,14 +542,14 @@ def main(case):
     for col, label in labels.items():
         outputs[f'tsc_{label}'] = (
             transmission_cost_ac[['r','rr','tscbin',col]]
-            .rename(columns={'r':'*r'}).round(2)
+            .round(2)
         )
     outputs['tscbin'] = transmission_cost_ac.tscbin.drop_duplicates()
 
     outputs['transmission_cost_nonac'] = interface_params.loc[
         interface_params.trtype != 'AC',
         ['r', 'rr', 'trtype', f'USD{reeds.io.get_switches(case).dollar_year}perMW']
-    ].rename(columns={'r':'*r'}).round(2)
+    ].round(2)
 
     ### Pipelines
     outputs['pipeline_cost_mult'] = get_pipeline_cost_mult(
@@ -564,8 +561,8 @@ def main(case):
 
     ### CO2 storage sites
     routes_cs = calculate_co2_storage_routes(case)
-    outputs['r_cs'] = routes_cs[['*r', 'cs']]
-    outputs['r_cs_distance_mi'] = routes_cs[['*r', 'cs', 'miles']]
+    outputs['r_cs'] = routes_cs[['r', 'cs']]
+    outputs['r_cs_distance_mi'] = routes_cs[['r', 'cs', 'miles']]
 
     # Determine sites that have valid routes to model regions
     val_cs = pd.Series(routes_cs['cs'].unique())
@@ -578,32 +575,33 @@ def main(case):
     # Create WKT file of region-to-site spurlines
     outputs['ctus_r_cs_spurlines_200mi'] = (
         routes_cs.loc[routes_cs['distance_m'] > 0]
-        .rename(columns={'*r': 'ba_str', 'cs': 'FmnID'})
+        .rename(columns={'r': 'ba_str', 'cs': 'FmnID'})
         .to_crs('EPSG:4326')
         .assign(WKT=lambda x: x['geometry'].to_wkt())
         [['ba_str', 'FmnID', 'distance_m', 'WKT']]
     )
 
+    #%% Downselect to active regions
+    table = {'co2_site_char': True}
+    hierarchy = reeds.io.get_hierarchy(case).reset_index()
+    for key, df in outputs.items():
+        columns = df.columns if isinstance(df, pd.DataFrame) else []
+        for level in hierarchy:
+            levell = level + level[-1]
+            if level in columns:
+                df = df.loc[df[level].isin(hierarchy[level])]
+            if levell in columns:
+                df = df.loc[df[levell].isin(hierarchy[level])]
+        ### Add '*' to the beginning so GAMS reads the header as a comment
+        if not table.get(key, False):
+            if isinstance(df, pd.DataFrame):
+                df = df.rename(columns={df.columns[0]: '*'+str(df.columns[0])})
+            else:
+                df = df.rename('*'+df.name) if df.name else df
+        outputs[key] = df
+
     #%% Write the outputs
-    index = {
-        'transmission_distance': False,
-        'trancap_fut': False,
-        'transmission_cost_nonac': False,
-        'trancap_init_energy': False,
-        'trancap_init_transgroup': False,
-        'trancap_init_prm': False,
-        'trancap_init_itlgrp': False,
-        'routes_adjacent': False,
-        'r_cs': False,
-        'r_cs_distance_mi': False,
-        'co2_site_char': False,
-        'ctus_r_cs_spurlines_200mi': False,
-        'pipeline_cost_mult': False,
-        'tsc_binwidth': False,
-        'tsc_forward': False,
-        'tsc_reverse': False,
-        'tscbin': False,
-    }
+    index = {}
     header = {
         'val_cs': False,
         'tscbin': False,
@@ -611,9 +609,8 @@ def main(case):
     for key, df in outputs.items():
         df.to_csv(
             Path(case, 'inputs_case', f'{key}.csv'),
-            index=index.get(key, True), header=header.get(key, True),
+            index=index.get(key, False), header=header.get(key, True),
         )
-        print(f'Wrote {key}.csv')
 
     #%% Done
     return outputs
