@@ -68,7 +68,7 @@ jobs:
         
       - name: Restore Zenodo files from cache
         id: cache-zenodo
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             inputs/remote/
@@ -91,6 +91,7 @@ jobs:
         run: python .github/scripts/download_test_zenodo_files.py
 
   run-ReEDS:
+    if: ${{ github.actor != 'dependabot[bot]' }}
     name: run ReEDS model matrix
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -125,7 +126,7 @@ jobs:
 
       - name: Restore LFS cache
         id: lfs-restore
-        uses: actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: .git/lfs
           key: lfs-${{ runner.os }}-${{ hashFiles('.lfs-assets-id') }}-v1
@@ -136,7 +137,7 @@ jobs:
 
       - name: Save the updated LFS cache
         if: steps.lfs-restore.outputs.cache-hit != 'true'
-        uses: actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: .git/lfs
           key: ${{ steps.lfs-restore.outputs.cache-primary-key }}
@@ -148,7 +149,7 @@ jobs:
 
       - name: Restore Zenodo files from cache
         id: cache-zenodo
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
           path: |
             inputs/remote/
@@ -242,6 +243,7 @@ jobs:
             ${{ env.RUN_FOLDER }}/outputs/**/*.h5
 
   run-R2X:
+    if: ${{ github.actor != 'dependabot[bot]' }}
     name: run R2X compatibility matrix
     runs-on: ubuntu-latest
     timeout-minutes: 30
