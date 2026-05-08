@@ -81,6 +81,7 @@ def get_earliest_cap_costs(inputs_case):
         'cost_cap_fin_mult_out',
         old_interface=False
     )
+    cost_cap_mult.i = cost_cap_mult.i.str.lower()
     cost_cap_mult['t'] = cost_cap_mult['t'].astype(int)
     cost_cap_mult = cost_cap_mult.rename(
         columns={'Value': 'cap_cost_mult_for_ratebase'}
