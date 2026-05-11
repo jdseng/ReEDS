@@ -1349,11 +1349,12 @@ def write_batch_script(
             )
         ### Otherwise, run for the last iteration (selected numerically)
         else:
+            fpath = os.path.join(casedir, "reeds", "core", "terminus", "get_last_iter.py")
             OPATH.writelines(
-                f'r=$(python {os.path.join(casedir, "reeds", "get_last_iter.py")} {batch_case} {max(solveyears)})\n'
+                f'r=$(python {fpath} {batch_case} {max(solveyears)})\n'
                 if LINUXORMAC else
                 f'for /f "delims=" %%i in '
-                f'(\'python {os.path.join(casedir, "reeds", "get_last_iter.py")} {batch_case} {max(solveyears)}\')'
+                f'(\'python {fpath} {batch_case} {max(solveyears)}\')'
                 f' do set "r=%%i"\n'
             )
         OPATH.writelines(
