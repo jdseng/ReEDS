@@ -589,7 +589,6 @@ These parameters can be adjusted to emphasize or de-emphasize specific scenarios
 Since these weights are used as multiplicative factors on reference files,
 Dirichlet sampling tends to favor combinations that lean toward central scenarios when the inputs represent "low",
 "medium", and "high" pathways.
-- 
 
 See below examples of weights for Dirichlet distributions using different concentration parameters and an arbitrary set of
 Low, Mod, and High values ({numref}`figure-mcs-three-param-dirichlet` and {numref}`figure-mcs-two-param-dirichlet`).

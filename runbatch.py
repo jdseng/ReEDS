@@ -533,7 +533,7 @@ def check_compatibility(sw):
 
 # function to stop the model after input processing
 def stop_after_input_processing(OPATH, reeds_path, casedir, caseSwitches):
-    comment(f'Exit after input_processing', OPATH)
+    comment('Exit after input_processing', OPATH)
     OPATH.writelines(
         f"python {os.path.join(reeds_path, 'postprocessing', 'cleanup_files.py')} "
         f"{casedir} --force --quiet --level {caseSwitches['cleanup_level']}\n"

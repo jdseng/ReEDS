@@ -18,7 +18,7 @@ import yaml
 import datetime
 from typing import Tuple, List
 from collections import defaultdict
-from scipy.stats import qmc, uniform, triang
+import scipy.stats
 
 # Local Imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -1531,10 +1531,6 @@ class MCS_Sampler:
         group_name = self.sample_group["name"]
         assignments_list = self.sample_group["assignments_list"]
 
-        # Get shape of any region’s weight array
-        any_region = next(iter(r_weights))
-        n_assignments = r_weights[any_region].shape
-
         # Build column names
         columns = ['group_name', 'switch_name', 'sw_assignment', 'r', 'weight']
         data = []
@@ -1584,7 +1580,7 @@ class MCS_Sampler:
         unif_loc = lower_new
         unif_scale = upper_new - lower_new
         # extract sample
-        lhs_vals = uniform.ppf(self.lhs_samples[sample_num, dim_num], loc=unif_loc, scale=unif_scale)
+        lhs_vals = scipy.stats.uniform.ppf(self.lhs_samples[sample_num, dim_num], loc=unif_loc, scale=unif_scale)
         
         return lhs_vals
 
@@ -1610,7 +1606,7 @@ class MCS_Sampler:
 
         # draw lhs samples; 'sample_num' matches the sample row for the relevant ReEDS run and
         # 'dim_num' matches the relevant column for the dimension
-        lhs_vals = triang.ppf(self.lhs_samples[sample_num, dim_num], c=tri_c, loc=tri_loc, scale=tri_scale)
+        lhs_vals = scipy.stats.triang.ppf(self.lhs_samples[sample_num, dim_num], c=tri_c, loc=tri_loc, scale=tri_scale)
         
         return lhs_vals
 
@@ -1649,7 +1645,6 @@ class MCS_Sampler:
             n_decimals (int): Number of decimal places for rounding the result.
         """
         sw_name = self.sample_group['switch_names'][sample_idx]
-        samples_sw = [None for n in range(self.n_samples)]
         sw_assignments = self.sample_group['sw_assignments'][sample_idx]
 
         if self.distribution == "triangular":
@@ -1820,7 +1815,6 @@ def write_samples(
         sample_values = samples_dict[sample_ID]
         sw_name = sample_group['switch_names'][sample_idx]
         save_path = sample_group['save_paths'][sample_idx]  # Where the samples will be copied to
-        folder_path = os.path.dirname(save_path)  # Folder path without the file name
         
         file_name = sample_group["file_names"][sample_idx]
         file_termination = os.path.splitext(save_path)[-1]  # File termination (.csv, .h5, etc.)
@@ -1898,7 +1892,7 @@ def main(
         lhs_dim = df_input_dist_instructions.shape[0]
         # lhs requires drawing all samples simultaneously, so rather than using
         # a run-specific seed we draw for all samples the seed value 
-        lhs_sampler = qmc.LatinHypercube(d=lhs_dim, seed=seed)
+        lhs_sampler = scipy.stats.qmc.LatinHypercube(d=lhs_dim, seed=seed)
         # lhs_samples are arranged n x d (n = samples, d = dimensions)
         lhs_samples = lhs_sampler.random(n=n_samples)
         # record the lhs sampling matrix in each run folder
