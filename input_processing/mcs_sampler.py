@@ -2,23 +2,21 @@
 This module performs the Monte Carlo sampling for ReEDS.
 """
 
-# TODO: clean up function documentation
-
 
 #%% ===========================================================================
 ### --- IMPORTS ---
 ### ===========================================================================
-import os
-import sys
-import numpy as np
-import pandas as pd
-import copy
 import argparse
-import yaml
+import copy
 import datetime
+import numpy as np
+import os
+import pandas as pd
+import scipy.stats
+import sys
+import yaml
 from typing import Tuple, List
 from collections import defaultdict
-import scipy.stats
 
 # Local Imports
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -687,7 +685,7 @@ def get_all_region_weights(
             for cendiv in cendivs:
                 all_r_weights[cendiv] = r_weights
         # Load data is at the state level, so save the state weights if
-        # the sample_hiearchy_lvl is 'st'
+        # the sample_hierarchy_lvl is 'st'
         elif sample_hierarchy_lvl == "st":
             all_r_weights[region] = r_weights
 
@@ -1437,7 +1435,7 @@ class MCS_Sampler:
             for (new_c_r, old_c_r) in weights[f].index:
                 sample_sw[new_c_r] += df[old_c_r] * weights[f].loc[(new_c_r,old_c_r)].values[0]
 
-        # Round numbers to 9 decimal places and allow a maxium values of 1
+        # Round numbers to 9 decimal places and allow min/max values of 0 and 1
         for new_c_r in sample_sw.keys():
             sample_sw[new_c_r] = sample_sw[new_c_r].round(9).clip(0,1)
 
@@ -1776,8 +1774,7 @@ class MCS_Sampler:
                 if file_name == "switches.csv":
                     self.apply_lhs_switches_csv(sample_group_num, sample_idx, dist_files, n_decimals)
                 elif file_name in MCSConstants.RECF_FILES:
-                    #self._apply_weights_recf(dist_files, sample_idx)
-                    pass
+                    self._apply_weights_recf(dist_files, sample_idx)
                 else:
                     self.apply_lhs_general(sample_group_num, Sample_ID, dist_files, aux_files, modifiable_columns)
             else:

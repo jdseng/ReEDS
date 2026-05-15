@@ -561,7 +561,7 @@ This enables state level uncertainty in siting supply curves for wind and solar 
 
 There are two sampling approaches available for Monte Carlo analysis: random sampling and Latin Hypercube sampling. 
 
-Random sampling uses the numpy `random` method for the relevant distribtion to sample a set of weights. 
+Random sampling uses the numpy `random` method for the relevant distribution to sample a set of weights. 
 These weights are applied to the assignment values specified in the distribution group to generate the value for each run.
 To ensure reproducibility, the Monte Carlo run number is used as the seed value. 
 
@@ -573,7 +573,7 @@ The values in this matrix represent sampling of the cumulative probability distr
 and are later used by the inverse CDF (percent point) functions to derive the actual sample values. 
 A single seed value is used for all runs, resulting in unique sampling matrices for a given set of values of N and D.
 
-The LHS method tends to results in sampling value that converge on the true input distributions for lower numbers of samples.
+The LHS method tends to result in sampling values that converge on the true input distributions for lower numbers of samples.
 However, it does not currently support sampling for any spatial resolution besides country 
 or using multivariate distributions such as the Dirichlet.
 
