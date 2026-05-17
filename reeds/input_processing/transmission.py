@@ -265,24 +265,6 @@ def get_trancap_init(case, interface_params, level='r'):
         valid_regions[i] = pd.read_csv(
             Path(case, 'inputs_case', f'val_{i}.csv'), header=None).squeeze(1).tolist()
 
-    ### DEPRECATED: p19 is islanded with NARIS transmission data, so connect it manually
-    if (
-        (sw.GSw_TransNetworkSource == 'NARIS2024')
-        and (level != 'transgrp')
-        and ('p19' in valid_regions['r'])
-        and ('p20' in valid_regions['r'])
-    ):
-        trancap_init_ac = pd.concat([
-            trancap_init_ac,
-            pd.Series({
-                'r':'p19',
-                'rr':'p20',
-                'MW_forward':0.001,
-                'MW_reverse':0.001,
-                'trtype':'AC',
-            }).to_frame().T
-        ], ignore_index=True)
-
     ### DC
     if level == 'r':
         ## transgrp capacity is only defined for AC
