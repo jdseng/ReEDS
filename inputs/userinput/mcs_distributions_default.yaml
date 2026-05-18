@@ -1,4 +1,5 @@
 # Description: This file defines the distributions used for Monte Carlo Sampling (MCS) analysis.
+# For rules on the distribution entries and support see inputs/userinput/mcs_distribution_rules.yaml
 
 # Distribution definition fields:
 # 1. name: A unique identifier for the distribution group, used in the 'MCS_dist_groups' switch.
