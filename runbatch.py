@@ -92,7 +92,7 @@ def create_case_lists(df_cases:pd.DataFrame, BatchName:str, single:str=''):
         # If --single/-s was passed, only keep those cases (regardless of ignore)
         # otherwise, drop any case marked ignore
         if single:
-            if case not in single.split(','):
+            if not sum([s in case for s in single.split(',')]):
                 continue
         else:
             if int(df_cases.loc['ignore', case]) == 1:
@@ -971,14 +971,16 @@ def setupEnvironment(
     # If the "single" argument is provided, only run that case
     if single:
         for s in single.split(','):
-            if s not in df_cases:
-                err = (
-                    f'Specified single={single} but available cases are:\n'
+            # check for case specified by single argument
+            # use filter to capture any Monte Carlo runs
+            if df_cases.filter(like=s).shape[1] == 0:
+                print(
+                    f'Specified single={single} but available cases are:\n\n> '
                     + '\n> '.join([c for c in df_cases.columns])
                 )
-                raise KeyError(err)
-        df_cases = df_cases[single.split(',')].copy()
-        casenames = single.split(',')
+                raise KeyError()
+        df_cases = df_cases.filter(like=s)
+        casenames = list(df_cases.columns)
 
     # Make sure the run folders don't already exist
     outpaths = [os.path.join(reeds_path,'runs',f'{BatchName}_{case}') for case in casenames]
