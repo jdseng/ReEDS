@@ -960,9 +960,8 @@ def setupEnvironment(
         WORKERS = simult_runs
     else:
         WORKERS = int(input('Number of simultaneous runs [positive integer]: '))
-        if WORKERS <=0:
-            print('Number of simultaneous runs must be at least 1. Exiting.')
-            quit()
+        if WORKERS <= 0:
+            raise ValueError(f'Provided {WORKERS} but must be a positive integer')
 
     if 'int' in df_cases.loc['timetype'].tolist() or 'win' in df_cases.loc['timetype'].tolist():
         ccworkers = int(input('Number of simultaneous CC/Curt runs [integer]: '))
