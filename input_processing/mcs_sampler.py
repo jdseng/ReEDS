@@ -858,7 +858,9 @@ class WeightCalculator:
         if file_name == 'load.h5':
             columns_other_states = [col for col in dist_files[0].keys() if col not in columns_in_hierarchy]
             if len(columns_other_states) > 0:
-                generic_weight_matrix = self.r_weights[next(iter(self.r_weights))]
+                # get the first entry of the regional weights as a placeholder
+                first_region = list(self.r_weights)[0]
+                generic_weight_matrix = self.r_weights[first_region]
                 generic_weights = dict.fromkeys(columns_other_states, generic_weight_matrix)
                 self.r_weights.update(generic_weights)
                 columns_in_hierarchy = columns_in_hierarchy + columns_other_states
@@ -876,7 +878,7 @@ class WeightCalculator:
         # (or no regions). 
         if single_r_weight:
             # Get the first region key
-            first_region = next(iter(self.r_weights))
+            first_region = list(self.r_weights)[0]
             weight_matrix = self.r_weights[first_region]
 
             if file_name == "switches.csv":
