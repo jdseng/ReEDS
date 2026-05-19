@@ -156,27 +156,22 @@ def reeds_cc(t, tnext, casedir):
     ### Get forced outage profiles, flatten, and melt
     forced_outage_rate = reeds.io.get_outage_hourly(inputs_case,'forced')
 
+    # drop techs that won't use this capacity credit before stacking
+    techs_to_drop = ['battery_li','can-imports','distpv', 'electrolyzer',
+                    'hydd', 'hyded', 'hydend', 'hydnd', 'hydnpd', 'hydnpnd',
+                    'hydro', 'hydsd', 'hydsnd', 'hydud', 'hydund', 'pumped-hydro']
+    
+    forced_outage_rate = forced_outage_rate.drop(columns=techs_to_drop, errors='ignore')
+
     forced_outage_rate = (forced_outage_rate
                             .stack(level=1)
                             .reset_index()
                             .rename(columns={"level_0": "timestamp"})
                             )
 
-    # drop techs that won't use this capacity credit
-    techs_to_drop = ['battery_li','can-imports','distpv', 'electrolyzer',
-                    'hydd', 'hyded', 'hydend', 'hydnd', 'hydnpd', 'hydnpnd',
-                    'hydro', 'hydsd', 'hydsnd', 'hydud', 'hydund', 'pumped-hydro']
-    
-    forced_outage_rate = forced_outage_rate.drop(columns=techs_to_drop)
-
     forced_outage_rate = pd.melt(
         forced_outage_rate,
         id_vars=['timestamp','r'], 
-        value_vars=['beccs_max', 'beccs_mod', 'biopower', 'coal-ccs-f1', 'coal-ccs-f2', 'coal-ccs-f3',
-                    'coal-ccs_max', 'coal-ccs_mod','coal-igcc', 'coal-new', 'coaloldscr', 'coalolduns',
-                    'cofirenew', 'cofireold', 'gas-cc', 'gas-cc-ccs-f1', 'gas-cc-ccs-f2',
-                    'gas-cc-ccs-f3', 'gas-cc-ccs_max', 'gas-cc-ccs_mod', 'gas-ct', 'geothermal',
-                    'h2-cc', 'h2-ct', 'lfill-gas', 'nuclear','nuclear-smr', 'o-g-s']
     )
     
     # Remove the "8760" safety valve bin
