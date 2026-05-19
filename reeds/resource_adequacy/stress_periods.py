@@ -203,7 +203,7 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     """
     """
     ### Get values from PRAS
-    dfmetric = reeds.ra.get_pras_stress_metric(case=case, t=t, iteration=iteration, stress_metric=stress_metric)
+    dfmetric = get_pras_stress_metric(case=case, t=t, iteration=iteration, stress_metric=stress_metric)
 
     ### Get load (for calculating NEUE)
     if stress_metric.upper() == 'NEUE':
@@ -325,7 +325,7 @@ def _evaluate_stress_threshold_criterion(stress_criteria, criterion, sw, t, iter
         index_col=['level', 'metric', 'region'],
     ).squeeze(1)
 
-    stress_periods = reeds.ra.get_stress_metric_periods(
+    stress_periods = get_stress_metric_periods(
         case=sw.casedir, t=t, iteration=iteration,
         hierarchy_level=hierarchy_level,
         stress_metric=stress_metric,
