@@ -319,12 +319,26 @@ def check_compatibility(sw):
     reeds_path = os.path.dirname(__file__)
     hierarchy = reeds.io.get_hierarchy(GSw_ZoneSet=sw['GSw_ZoneSet']).reset_index()
 
-    stressThresholdMetrics = [s.split('GSw_PRM_StressThreshold')[1] 
+    ### Check that the stress metrics specified in GSw_PRM_StressThresholdMetrics
+    #  have corresponding GSw_PRM_StressThreshold{metric} switches
+    stressThresholdMetricSwitches = [s.split('GSw_PRM_StressThreshold')[1]
                              for s in sw.keys() if s.startswith('GSw_PRM_StressThreshold')
-                             and not s.endswith('Metrics') 
+                             and not s.endswith('Metrics')
                              ]
-    for stress_metric in stressThresholdMetrics:
-        for threshold in sw[f'GSw_PRM_StressThreshold{stress_metric}'].split('/'):
+    stressTresholdMetricControls = sw['GSw_PRM_StressThresholdMetrics'].split('/')
+
+    # Metric control but not defined as switch
+    for metric in stressTresholdMetricControls:
+        if metric.upper() not in stressThresholdMetricSwitches:
+            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric.upper()} is not defined as a switch")
+    
+    #  Metric switch but not defined in control
+    for metric in stressThresholdMetricSwitches:
+        if metric.upper() not in stressTresholdMetricControls:
+            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric.upper()} is added but not found in GSw_PRM_StressThresholdMetrics")
+        
+    for metric in stressThresholdMetricSwitches:
+        for threshold in sw[f'GSw_PRM_StressThreshold{metric}'].split('/'):
             ## Example: threshold = 'transgrp_10_EUE_sum'
             allowed_levels = ['country','interconnect','nercr','transreg','transgrp','st','r']
             (hierarchy_level, ppm, stress_metric, period_agg_method) = threshold.split('_')
@@ -340,7 +354,7 @@ def check_compatibility(sw):
                     f"ppm in GSw_PRM_StressThreshold{stress_metric} must be a positive number "
                     f"but '{ppm}' was provided"
                 )
-            if stress_metric.upper() not in ['EUE','NEUE', 'LOLE']:
+            if stress_metric.upper() not in ['EUE','NEUE','LOLE']:
                 raise ValueError(
                     f"stress metric in GSw_PRM_StressThreshold{stress_metric} must be 'EUE', 'NEUE', or 'LOLE' "
                     f"but '{stress_metric}' was provided"
