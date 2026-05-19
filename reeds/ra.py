@@ -15,7 +15,6 @@ def get_pras_stress_metric(case, t, iteration=0, stress_metric='EUE'):
     dfpras = reeds.io.read_pras_results(
         os.path.join(case, 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{iteration}.h5")
     )
-    dfpras.to_csv('pras_results.csv')
     ### Create the time index
     sw = reeds.io.get_switches(case)
     dfpras.index = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
