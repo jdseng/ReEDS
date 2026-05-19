@@ -23,7 +23,7 @@ def get_pras_stress_metric(case, t, iteration=0, stress_metric='EUE'):
     """
     ### Get PRAS outputs
     dfpras = reeds.io.read_pras_results(
-        os.path.join(case, 'ReEDS_Augur', 'PRAS', f"PRAS_{t}i{iteration}.h5")
+        os.path.join(case, 'handoff', 'PRAS', f"PRAS_{t}i{iteration}.h5")
     )
     ### Create the time index
     sw = reeds.io.get_switches(case)
@@ -91,7 +91,7 @@ def get_stress_metric_periods(
         ### Get load at hierarchy_level
         dfload = reeds.io.read_h5py_file(
             os.path.join(
-                case,'ReEDS_Augur','augur_data',f'pras_load_{t}.h5')
+                case,'handoff','augur_data',f'pras_load_{t}.h5')
         ).rename(columns=rmap).groupby(level=0, axis=1).sum()
         dfload.index = dfmetric.index
 
@@ -209,7 +209,7 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     if stress_metric.upper() == 'NEUE':
         dfload = reeds.io.read_h5py_file(
             os.path.join(
-                case,'ReEDS_Augur','augur_data',f'pras_load_{t}.h5')
+                case,'handoff','augur_data',f'pras_load_{t}.h5')
         )
         dfload.index = dfmetric.index
 
