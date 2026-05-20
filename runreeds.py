@@ -335,11 +335,11 @@ def check_compatibility(sw):
         if metric.upper() not in stressThresholdMetricSwitches:
             raise NotImplementedError(f"GSw_PRM_StressThreshold{metric} is not specified as a switch.")
     
-    # Threshold metric is not added but specified as a switch
-    for metric in stressThresholdMetricSwitches:
-        if metric.upper() not in stressTresholdMetrics:
-            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric} is specified as a switch,"
-                f"but not added to GSw_PRM_StressThresholdMetrics list {stressTresholdMetrics}")
+    # # Threshold metric is not added but specified as a switch
+    # for metric in stressThresholdMetricSwitches:
+    #     if metric.upper() not in stressTresholdMetrics:
+    #         raise NotImplementedError(f"GSw_PRM_StressThreshold{metric} is specified as a switch,"
+    #             f"but not added to GSw_PRM_StressThresholdMetrics list {stressTresholdMetrics}")
         
     for metric in stressThresholdMetricSwitches:
         for threshold in sw[f'GSw_PRM_StressThreshold{metric}'].split('/'):
