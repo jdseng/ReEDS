@@ -3543,6 +3543,11 @@ This provides a fixed initial price point from which the supply curve responds t
 
 All monetary values are deflated to 2004 dollars.
 
+```{seealso}
+The natural gas price regression implementation can be found in the
+[`aeo_updates/natural_gas_price_regression`](https://github.com/ReEDS-Model/ReEDS_Input_Processing/tree/main/aeo_updates/natural_gas_price_regression) folder of the ReEDS_Input_Processing repository.
+```
+
 #### Comparison of elasticities from regression approach to literature values
 
 Technical literature tends to report the price elasticity of supply and the price elasticity of demand, which are estimates of the supply and demand, respectively, of a good given a change in price.
