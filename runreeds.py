@@ -320,22 +320,26 @@ def check_compatibility(sw):
     hierarchy = reeds.io.get_hierarchy(GSw_ZoneSet=sw['GSw_ZoneSet']).reset_index()
 
     ### Check that the stress metrics specified in GSw_PRM_StressThresholdMetrics
-    #  have corresponding GSw_PRM_StressThreshold{metric} switches
+    # have corresponding GSw_PRM_StressThreshold{metric} switches
     stressThresholdMetricSwitches = [s.split('GSw_PRM_StressThreshold')[1]
                              for s in sw.keys() if s.startswith('GSw_PRM_StressThreshold')
                              and not s.endswith('Metrics')
                              ]
     stressTresholdMetricControls = sw['GSw_PRM_StressThresholdMetrics'].split('/')
 
+    print(f"stressThresholdMetricSwitches: {stressThresholdMetricSwitches}")
+    print(f"stressTresholdMetricControls: {stressTresholdMetricControls}")
+
     # Metric control but not defined as switch
     for metric in stressTresholdMetricControls:
         if metric.upper() not in stressThresholdMetricSwitches:
-            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric.upper()} is not defined as a switch")
+            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric} is not defined as a switch.")
     
-    #  Metric switch but not defined in control
+    # Metric switch but not defined in control
     for metric in stressThresholdMetricSwitches:
         if metric.upper() not in stressTresholdMetricControls:
-            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric.upper()} is added but not found in GSw_PRM_StressThresholdMetrics")
+            raise NotImplementedError(f"GSw_PRM_StressThreshold{metric} is defined as a switch, "
+                f"but not added to GSw_PRM_StressThresholdMetrics list {stressTresholdMetricControls}")
         
     for metric in stressThresholdMetricSwitches:
         for threshold in sw[f'GSw_PRM_StressThreshold{metric}'].split('/'):
