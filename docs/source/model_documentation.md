@@ -3518,7 +3518,7 @@ yielding the demeaned regression:
 
 $$d\text{Price}(r, t, s) = \beta_{\text{reg}}(r) \cdot dQ_{\text{reg}}(r, t, s) + \beta_{\text{nat}} \cdot dQ_{\text{nat}}(t, s)$$
 
-The 9 regional $\beta_{\text{reg}}$ values and 1 national $\beta_{\text{nat}}$ are then estimated jointly via OLS.
+The 9 regional $\beta_{\text{reg}}$ values and 1 national $\beta_{\text{nat}}$ are then estimated jointly via ordinary least squares.
 The national and regional $\beta$ terms are reported in {numref}`figure-census-division-values`.
 
 [^ref65]: A quad is a quadrillion Btu, or 10<sup>15</sup> Btu.
