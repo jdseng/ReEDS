@@ -280,7 +280,7 @@ def parse_cases(
             if (
                 c not in ['Description','Default Value','Choices']
                 and (int(dfcases.loc['MCS_runs',c]) > 0)
-                and (c == single or (single == "" and not int(dfcases.loc['ignore',c])))
+                and (not int(dfcases.loc['ignore',c]))
             ):
                 # Warn user if the hourly clustering algorithm is not fixed for Monte Carlo runs
                 if (
