@@ -1496,17 +1496,19 @@ def write_miscellaneous_files(
     # ----  Miscelanous files in non_region_files or region_files (in this case we are overwriting them)
     # Expand i (technologies) set if modeling water use. Overwrite originals.
     if int(sw['GSw_WaterMain']):
-        pd.concat([
-            pd.read_csv(
-                os.path.join(inputs_case,'i.csv'),
-                comment='*', header=None).squeeze(1),
+        techs = pd.concat([
+            reeds.io.read_input(inputs_case, 'i').squeeze(1),
             pd.read_csv(
                 os.path.join(inputs_case,'i_coolingtech_watersource.csv'),
                 comment='*', header=None).squeeze(1),
             pd.read_csv(
                 os.path.join(inputs_case,'i_coolingtech_watersource_upgrades.csv'),
                 comment='*', header=None).squeeze(1),
-        ]).to_csv(os.path.join(inputs_case,'i.csv'), header=False, index=False)
+        ])
+        reeds.io.write_to_inputs_h5(
+            techs, 'i', inputs_case, gamstype='set', comment='generation technologies',
+            overwrite=True,
+        )
 
     ## Unit sizes for ReEDS2PRAS
     fpath_out = os.path.join(inputs_case, 'unitsize.csv')
@@ -1638,7 +1640,7 @@ if __name__ == '__main__' and not hasattr(sys, 'ps1'):
 
     # #%% Settings for testing ###
     # reeds_path = reeds.io.reeds_path
-    # inputs_case = os.path.join(reeds_path,'runs','v20260425_inputsM0_Pacific','inputs_case')
+    # inputs_case = os.path.join(reeds_path,'runs','v20260522_transcostM0_OR_water','inputs_case')
 
 
     # ---- Set up logger ----
