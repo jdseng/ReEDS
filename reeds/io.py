@@ -452,7 +452,7 @@ def get_h2_storage_sites(h2_storage_type="salt"):
 
 
 ### Read files from a ReEDS case
-def read_h5(h5path:str|Path, key:str) -> pd.DataFrame():
+def read_h5(h5path:str|Path, key:str) -> pd.DataFrame:
     """Read a key from a ReEDS-formatted .h5 file"""
     if not Path(h5path).is_file():
         raise FileNotFoundError(h5path)
