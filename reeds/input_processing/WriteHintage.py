@@ -604,9 +604,10 @@ def main(reeds_path, inputs_case):
     # The number of classes is set by numhintage for initial capacity and numclass for new capacity
     # Under the Clean Air Act, all coal plants are regulated individually.
     # Therefore, we need a large value of hintages to represent these plants
+    scalars = reeds.io.get_scalars(inputs_case)
     max_hintage_number = tdat['bin'].max()
     if sw.numhintage in ['unit', 'group']:
-        numhintage = 300
+        numhintage = int(scalars.hintage_unit_number)
     else:
         if int(sw.GSw_Clean_Air_Act) == 1:
             numhintage = max_hintage_number
