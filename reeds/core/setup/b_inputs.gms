@@ -3447,10 +3447,10 @@ routes_inv(r,rr,trtype,t)$[notvsc(trtype)$routes(r,rr,trtype,t)] = yes ;
 routes_inv(r,rr,trtype,t)$[yeart(t)<firstyear_trans_nearterm] = no ;
 * If not allowing near-term transmission, turn those off until firstyear_trans_longterm
 routes_inv(r,rr,trtype,t)$[(not Sw_TransInvNearTerm)$(yeart(t)<firstyear_trans_longterm)] = no ;
-* Do allow "possible" interfaces to be expanded
+* Allow interfaces with planned expansions to be expanded
 routes_inv(r,rr,trtype,t)
-    $[sum{tt$[(yeart(tt)<=yeart(t))],
-          trancap_fut(r,rr,"possible",trtype,tt) + trancap_fut(rr,r,"possible",trtype,tt) }
+    $[sum{(tt,trancap_fut_cat)$[yeart(tt)<=yeart(t)],
+          trancap_fut(r,rr,trancap_fut_cat,trtype,tt) + trancap_fut(rr,r,trancap_fut_cat,trtype,tt) }
     $routes(r,rr,trtype,t)] = yes ;
 routes_inv(rr,r,trtype,t)$[not routes_inv(r,rr,trtype,t)] = no ;
 
