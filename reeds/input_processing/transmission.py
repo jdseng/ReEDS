@@ -288,8 +288,7 @@ def get_trancap_init(case, interface_params, level='r'):
     )
     valid_regions = {}
     for i in ['r', 'itlgrp', 'transgrp']:
-        valid_regions[i] = pd.read_csv(
-            Path(case, 'inputs_case', f'val_{i}.csv'), header=None).squeeze(1).tolist()
+        valid_regions[i] = reeds.io.read_input(case, i).squeeze(1).tolist()
 
     ### DC
     if level == 'r':
@@ -682,7 +681,7 @@ def main(case):
             transmission_cost_ac[['r','rr','tscbin',col]]
             .round(2)
         )
-    outputs['tscbin'] = transmission_cost_ac.tscbin.drop_duplicates()
+    outputs['tscbin'] = transmission_cost_ac.tscbin.drop_duplicates().rename()
     ## Write transmission_cost_ac for R2X
     outputs['transmission_cost_ac'] = transmission_cost_ac
 
@@ -731,11 +730,18 @@ def main(case):
         'val_cs': False,
         'tscbin': False,
     }
+    inputs_h5 = {
+        'tscbin': ('set', 'transmission upgrade supply curve bins'),
+    }
     for key, df in outputs.items():
-        df.to_csv(
-            Path(case, 'inputs_case', f'{key}.csv'),
-            index=False, header=header.get(key, True),
-        )
+        if key in inputs_h5:
+            gamstype, comment = inputs_h5[key]
+            reeds.io.write_to_inputs_h5(df, key, case, gamstype=gamstype, comment=comment)
+        else:
+            df.to_csv(
+                Path(case, 'inputs_case', f'{key}.csv'),
+                index=False, header=header.get(key, True),
+            )
 
     #%% Done
     return outputs
