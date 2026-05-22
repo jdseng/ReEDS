@@ -91,7 +91,7 @@ def get_stress_metric_periods(
         ### Get load at hierarchy_level
         dfload = reeds.io.read_h5py_file(
             os.path.join(
-                case,'handoff','PRAS',f'pras_load_{t}.h5')
+                case,'handoff','reeds_data',f'pras_load_{t}.h5')
         ).rename(columns=rmap).groupby(level=0, axis=1).sum()
         dfload.index = dfmetric.index
 
@@ -209,7 +209,7 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     if stress_metric.upper() == 'NEUE':
         dfload = reeds.io.read_h5py_file(
             os.path.join(
-                case,'handoff','PRAS',f'pras_load_{t}.h5')
+                case,'handoff','reeds_data',f'pras_load_{t}.h5')
         )
         dfload.index = dfmetric.index
 
