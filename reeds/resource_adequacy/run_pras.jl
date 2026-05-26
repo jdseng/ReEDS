@@ -205,7 +205,7 @@ function run_pras(pras_system_path::String, args::Dict)
 
     #%% Print some results for the entire modeled region to show it worked
     @info "$(PRAS.LOLE(results["short"]))"
-    @info "$( PRAS.EUE(results["short"]))"
+    @info "$(PRAS.EUE(results["short"]))"
     @info "$(PRAS.NEUE(results["short"]))"
 
     ## Filter out DC regions used for VSC HVDC transmission
