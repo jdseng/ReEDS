@@ -191,8 +191,9 @@ def main():
         reeds_path = os.path.dirname(os.path.dirname(os.path.dirname(current_path)))
         reeds_path = reeds_path.replace("\\","/")
 
+    reeds_docs_path = os.path.join(reeds_path, "docs")
                
-    desc_file_path = os.path.join(reeds_path, desc_holder).replace("\\","/")
+    desc_file_path = os.path.join(reeds_docs_path, desc_holder).replace("\\","/")
 
 
     #Dataframe to store the newly generated sources.csv data
@@ -231,7 +232,7 @@ def main():
         
     #Generate separate readme for ReEDS 2.0 Sources files
     main_readme_file = "sources_documentation.md"
-    main_readme_file_path = os.path.join(reeds_path, main_readme_file).replace("\\","/")
+    main_readme_file_path = os.path.join(reeds_docs_path, main_readme_file).replace("\\","/")
 
     #Open markdown file for entries
     with open(main_readme_file_path, "w") as main_file:
