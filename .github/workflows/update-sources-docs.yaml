@@ -31,6 +31,7 @@ jobs:
                 # for PRs, we need to check out the actual PR branch so we can push back to it
                 ref: ${{ github.event.pull_request.head.ref }}
                 token: ${{ secrets.GITHUB_TOKEN }}
+                persist-credentials: false
 
             - name: Set up Python 3.12
               uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
