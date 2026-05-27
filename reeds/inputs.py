@@ -688,7 +688,7 @@ def _make_line(row):
     return shapely.LineString([[row.from_lon, row.from_lat], [row.to_lon, row.to_lat]])
 
 
-def get_hvdc_lines(filename='hvdc_lines.csv'):
+def get_hvdc_lines(filename='hvdc_existing.csv'):
     """Load data for individual HVDC lines"""
     datapath = Path(reeds.io.reeds_path, 'inputs', 'transmission', filename)
     dfdc = pd.read_csv(datapath)
@@ -701,7 +701,7 @@ def get_hvdc_lines(filename='hvdc_lines.csv'):
 
 def map_hvdc_lines_to_interfaces(
     case=None,
-    filename='hvdc_lines.csv',
+    filename='hvdc_existing.csv',
     dtype:Literal['capacity', 'cost']='capacity',
     **kwargs,
 ) -> pd.DataFrame:
@@ -712,10 +712,10 @@ def map_hvdc_lines_to_interfaces(
         case = None
         kwargs = {'GSw_ZoneSet': 'z132'}
         for filename in [
-            'hvdc_lines.csv',
-            'planned_lines-baseline.csv',
-            'planned_lines-NTP_MT.csv',
-            'planned_lines-NTP_P2P.csv',
+            'hvdc_existing.csv',
+            'hvdc_planned-baseline.csv',
+            'hvdc_planned-NTP_MT.csv',
+            'hvdc_planned-NTP_P2P.csv',
         ]:
             map_hvdc_lines_to_interfaces(case=case, filename=filename, kwargs=kwargs)
     """

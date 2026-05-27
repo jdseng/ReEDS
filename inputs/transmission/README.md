@@ -7,7 +7,7 @@
   This file is used to validate the interface-level B2B capacity for different spatial resolutions stored at `inputs/zones/{GSw_ZoneSet}/b2b.csv`.
 
 - `conductor_(ac|dc)*.csv`: Conductor and power rating assumptions for AC/DC transmission lines as a function of voltage from the MISO 2025 Transmission Cost Estimation Guide ([parent page](https://www.misoenergy.org/planning/transmission-planning/mtep), [description](https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimation%20Guide%20for%20MTEP25337433.pdf), [data workbook](https://cdn.misoenergy.org/MISO%20Transmission%20Cost%20Estimate%20Workbook%20for%20MTEP25547535.xlsx))
-  - `conductor_ac_default.csv` and `conductor_dc.csv` use the conductors specified by the MISO guide.
+  - `conductor_ac_acss.csv` and `conductor_dc.csv` use the conductors specified by the MISO guide.
   AC lines use either ACSR or ACSS conductors depending on the voltage.
   - `conductor_ac_acsr.csv` instead uses ACSR for all AC voltages.
   Ampacities for 477 kcmil (Flicker) and 795 kcmil (Drake) ACSR conductors are taken from [Southwire](https://www.southwire.com/wire-cable/bare-aluminum-overhead-transmission-distribution/acsr/p/ALBARE6).
@@ -16,8 +16,20 @@
 
 - `cost_hurdle_intra.csv`: Hurdle rate for transmission flows [\$/MWh] between ReEDS spatial hierarchy levels.
 
-- `hvdc_lines.csv`: Power capacity and start/end locations of [high-voltage direct current (HVDC) lines](https://en.wikipedia.org/wiki/List_of_HVDC_projects#North_America) in the USA.
+- `hvdc_existing.csv`: Power capacity and start/end locations of [high-voltage direct current (HVDC) lines](https://en.wikipedia.org/wiki/List_of_HVDC_projects#North_America) in the USA.
 These lines are mapped to ReEDS zone interfaces during input processing.
+
+- `hvdc_planned-*.csv`: Individual planned transmission projects
+  - Files:
+    - `hvdc_planned-baseline`: Included in all runs
+      - TransWest Express: Planned online date and capacity from [CAISO 2026](https://www.caiso.com/documents/ceo-report-mar-2026.pdf); route from [TransWest Express](https://www.transwestexpress.net/about/maps.shtml)
+      - SunZia: Planned online date from [CAISO 2026](https://www.caiso.com/documents/apr-13-2026-informational-filing-of-effective-date-transmission-control-agreement-regarding-subscriber-participating-transmission-owners-sunzia-er25-169.pdf); capacity and converter type from [Hitachi](https://www.hitachienergy.com/news-and-events/customer-stories/sunzia-transmission-enabling-3-gw-of-renewable-power-across-the-u-s-southwest); endpoints from [OpenInfraMap](https://openstreetmap.org/way/1420870282)
+    - `hvdc_planned-NTP_MT`: Lines used in the "MT" scenario of the [NTP Study](https://www.energy.gov/oe/national-transmission-planning-study-0)
+    - `hvdc_planned-NTP_P2P`: Lines used in the "P2P" scenario of the [NTP Study](https://www.energy.gov/oe/national-transmission-planning-study-0)
+  - Columns:
+    - `year_online`: If set to 0, determined from `this_year` and `years_until_trans_longterm` in `inputs/scalars.csv`
+    - `trtype`: LCC or VSC (also accepts AC, but it is better to handle AC additions via the ITL calculation than to add their rated capacity directly)
+    - `certain`: If 1, the line MUST be built at the provided `MW` capacity in `year_online`; if 0, the line MAY be built at up to the provided `MW` capacity starting in `year_online`
 
 - `itl_config.yaml`: Configuration file for interface transfer limit (ITL) calculations using the [TSC](https://github.nrel.gov/ReEDS/TSC) model.
 Metadata only; not used directly in ReEDS.
@@ -44,13 +56,6 @@ Calculated using the [TSC](https://github.nrel.gov/pbrown/TSC) model as describe
 
 - `newlinks_offshore_backbone.csv`: Candidate connections between offshore zones
   - Similarly formatted files for candidate connections between offshore and coastal land-based zones are found at `inputs/zones/{GSw_ZoneSet}/newlinks_offshore_radial.csv`
-
-- `planned_lines-*.csv`: Individual planned transmission projects
-  - `default`: Included in all runs
-    - TransWest Express: Planned online date and capacity from [CAISO 2026](https://www.caiso.com/documents/ceo-report-mar-2026.pdf); route from [TransWest Express](https://www.transwestexpress.net/about/maps.shtml)
-    - SunZia: Planned online date from [CAISO 2026](https://www.caiso.com/documents/apr-13-2026-informational-filing-of-effective-date-transmission-control-agreement-regarding-subscriber-participating-transmission-owners-sunzia-er25-169.pdf); capacity and converter type from [Hitachi](https://www.hitachienergy.com/news-and-events/customer-stories/sunzia-transmission-enabling-3-gw-of-renewable-power-across-the-u-s-southwest); endpoints from [OpenInfraMap](https://openstreetmap.org/way/1420870282)
-  - `NTP_MT`: Lines used in the "MT" scenario of the [NTP Study](https://www.energy.gov/oe/national-transmission-planning-study-0)
-  - `NTP_P2P`: Lines used in the "P2P" scenario of the [NTP Study](https://www.energy.gov/oe/national-transmission-planning-study-0)
 
 - `transmission_cost_distance.csv`: Cost [USD2024] and distance [miles] for greenfield interzonal single-circuit transmission lines of the specified polarity (AC or DC) and voltage [kV] between nodes of the specified zone hashes
   - Node locations are described in `inputs/zones/README.md` and found in the `inputs/zones/{GSw_ZoneSet}/zonehash.csv` files

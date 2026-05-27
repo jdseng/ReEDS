@@ -771,8 +771,8 @@ def plot_hvdc(case=None, crs='EPSG:5070', **kwargs):
 
     ### Get HVDC lines
     hvdc = pd.concat({
-        'existing': reeds.inputs.get_hvdc_lines('hvdc_lines.csv').set_index('name'),
-        'planned': reeds.inputs.get_hvdc_lines('planned_lines-baseline.csv').set_index('name'),
+        'existing': reeds.inputs.get_hvdc_lines('hvdc_existing.csv').set_index('name'),
+        'planned': reeds.inputs.get_hvdc_lines('hvdc_planned-baseline.csv').set_index('name'),
     }, names=('group',)).to_crs(crs)
     hvdc.geometry = hvdc.buffer(hvdc.MW * 15)
     offset = {

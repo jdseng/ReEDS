@@ -56,6 +56,7 @@ def get_interface_params(case, **kwargs):
     interface_params = gpd.GeoDataFrame(interface_params, crs='EPSG:4326')
     interface_params['straight_miles'] = (
         interface_params.geometry.to_crs('EPSG:5070').length
+        ## Convert from meters to miles
         / 1609.34
     )
     interface_params['squiggliness'] = interface_params.length_miles / interface_params.straight_miles
@@ -167,14 +168,14 @@ def get_trancap_fut(case):
     scalars = reeds.io.get_scalars(case)
     ## Always-included lines
     planned_capacity = reeds.inputs.map_hvdc_lines_to_interfaces(
-        case=case, filename='planned_lines-baseline.csv',
+        case=case, filename='hvdc_planned-baseline.csv',
     )
     ## Scenario-specific lines
     if sw.GSw_TransScen != 'none':
         planned_capacity = pd.concat([
             planned_capacity,
             reeds.inputs.map_hvdc_lines_to_interfaces(
-                case=case, filename=f'planned_lines-{sw.GSw_TransScen}.csv',
+                case=case, filename=f'hvdc_planned-{sw.GSw_TransScen}.csv',
             )
         ])
     ## Offshore lines
@@ -294,7 +295,7 @@ def get_trancap_init(case, interface_params, level='r'):
     if level == 'r':
         ## transgrp capacity is only defined for AC
         hvdc = (
-            reeds.inputs.map_hvdc_lines_to_interfaces(case, filename='hvdc_lines.csv')
+            reeds.inputs.map_hvdc_lines_to_interfaces(case, filename='hvdc_existing.csv')
             .reset_index()
         )
         b2b = reeds.inputs.get_b2b(case).assign(trtype='B2B')
