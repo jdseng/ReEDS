@@ -701,7 +701,9 @@ if not int(sw.GSw_PRM_CapCredit):
         print(traceback.format_exc())
 
     try:
-        level, threshold, _, metric = sw['GSw_PRM_StressThreshold'].split('/')[0].split('_')
+        _first_metric = sw['GSw_PRM_StressThresholdMetrics'].split('/')[0].upper()
+        _parts = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')
+        level, threshold, metric = _parts[0], _parts[1], _parts[2]
         plt.close()
         f,ax = reedsplots.plot_stressperiod_evolution(
             case=case, level=level, metric=metric)

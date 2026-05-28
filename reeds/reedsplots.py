@@ -484,7 +484,7 @@ def plot_diff(
     ymax = max(ax[0].get_ylim()[1], ax[1].get_ylim()[1])
     ymin = min(ax[0].get_ylim()[0], ax[1].get_ylim()[0])
     if val == 'NEUE (ppm)':
-        neue_threshold = float(sw.GSw_PRM_StressThreshold.split('_')[1])
+        neue_threshold = float(sw.GSw_PRM_StressThresholdNEUE.split('_')[1])
         ymax = max(ymax, 10, neue_threshold*1.05)
         ax[0].axhline(neue_threshold, c='C7', ls='--', lw=0.75)
         ax[1].axhline(neue_threshold, c='C7', ls='--', lw=0.75)
@@ -4137,7 +4137,9 @@ def plot_stressperiod_evolution(
     """Plot NEUE by year and stress period iteration"""
     ### Parse inputs
     sw = reeds.io.get_switches(case)
-    _level, _threshold, _, _metric = sw['GSw_PRM_StressThreshold'].split('/')[0].split('_')
+    _first_metric = sw['GSw_PRM_StressThresholdMetrics'].split('/')[0].upper()
+    _parts = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')
+    _level, _threshold, _metric = _parts[0], _parts[1], _parts[2]
     level = _level if level is None else level
     threshold = float(_threshold) if threshold is None else threshold
     metric = _metric if metric is None else metric
@@ -4261,8 +4263,9 @@ def plot_neue_bylevel(
     norm = {'sum':1, 'max':1e-4}
     ylabel = {'sum': 'Sum of NEUE [ppm]', 'max':'Max NEUE [%]'}
     thresholds = {
-        i.split('_')[0]: float(i.split('_')[1])
-        for i in sw.GSw_PRM_StressThreshold.split('/')
+        sw[f'GSw_PRM_StressThreshold{m.upper()}'].split('_')[0]:
+        float(sw[f'GSw_PRM_StressThreshold{m.upper()}'].split('_')[1])
+        for m in sw.GSw_PRM_StressThresholdMetrics.split('/')
     }
     ### Plot it
     plt.close()
@@ -4326,8 +4329,8 @@ def map_neue(
     neue = reeds.io.read_output(case, f'neue_{year}i{_iteration}.csv')
     neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE_ppm
     sw = reeds.io.get_switches(case)
-    neue_threshold = float(sw.GSw_PRM_StressThreshold.split('_')[1])
-    neue_threshold_level = sw.GSw_PRM_StressThreshold.split('_')[0]
+    neue_threshold = float(sw.GSw_PRM_StressThresholdNEUE.split('_')[1])
+    neue_threshold_level = sw.GSw_PRM_StressThresholdNEUE.split('_')[0]
 
     ### Set up plot
     levels = ['interconnect','nercr','transreg','transgrp','st','r']
@@ -6195,7 +6198,8 @@ def map_stressors(
         dfmap[k] = v.to_crs(crs)
 
     ### Derived inputs
-    criterion = sw.GSw_PRM_StressThreshold.split('/')[0]
+    _first_metric = sw.GSw_PRM_StressThresholdMetrics.split('/')[0].upper()
+    criterion = sw[f'GSw_PRM_StressThreshold{_first_metric}']
     level = criterion.split('_')[0]
     regions = hierarchy[level].unique()
     region2rs = {
@@ -6656,7 +6660,8 @@ def map_prm(case, tmin=2023, cmap=cmocean.cm.rain, scale=3, fontsize=7, vmax=Non
 
     ### Plot it
     nrows, ncols, coords = plots.get_coordinates(year2iteration.index, aspect=1.8)
-    level = sw.GSw_PRM_StressThreshold.split('_')[0]
+    _first_metric = sw.GSw_PRM_StressThresholdMetrics.split('/')[0].upper()
+    level = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')[0]
     plt.close()
     f,ax = plt.subplots(
         nrows, ncols, figsize=(ncols*scale, nrows*scale*0.8), sharex=True, sharey=True,
