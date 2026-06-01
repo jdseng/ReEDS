@@ -389,11 +389,11 @@ def check_compatibility(sw):
     if int(sw['GSw_PRM_UpdateMethod']) == 0 and int(sw['GSw_PRM_CapCredit']) == 1 and int(sw['GSw_PRM_StressIterateMax']) > 0:
         raise ValueError(
             "The combination of GSw_PRM_UpdateMethod=0, GSw_PRM_CapCredit=1, "
-            "and GSw_PRM_StressIterateMax>0 is not supported."
-            "To iteratively update the PRM, set GSw_PRM_UpdateMethod to one of: "
-            "(1) static update set by GSw_PRM_UpdateFraction; "
-            "(2) dynamic update informed by PRAS; "
-            "(3) dynamic update but only after all new stress periods have been added"
+            "and GSw_PRM_StressIterateMax>0 is not supported.\n"
+            "To iteratively update the PRM, set GSw_PRM_UpdateMethod to an integer between 1-3:"
+            "\n1: static update set by GSw_PRM_UpdateFraction; "
+            "\n2: dynamic update informed by PRAS; "
+            "\n3: dynamic update but only after all new stress periods have been added"
         )
 
     for bir in sw['GSw_PVB_BIR'].split('_'):

@@ -160,7 +160,7 @@ def reeds_cc(t, tnext, casedir):
                     'hydd', 'hyded', 'hydend', 'hydnd', 'hydnpd', 'hydnpnd',
                     'hydro', 'hydsd', 'hydsnd', 'hydud', 'hydund', 'pumped-hydro']
     
-    forced_outage_rate = forced_outage_rate.drop(columns=techs_to_drop, errors='ignore')
+    forced_outage_rate = forced_outage_rate.drop(columns=techs_to_drop, level=0, errors='ignore')
 
     forced_outage_rate = (forced_outage_rate
                             .stack(level=1)

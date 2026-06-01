@@ -166,18 +166,7 @@ def main(t, tnext, casedir, iteration=0):
             )
 
     #%% Identify stress periods
-    if (
-        int(sw['GSw_PRM_CapCredit']) == 0 
-        and ('user' not in sw['GSw_PRM_StressModel'].lower())
-        ):
-        print('identifying new stress periods...')
-        tic = datetime.datetime.now()
-    elif (
-        int(sw['GSw_PRM_CapCredit']) and (int(sw['GSw_PRM_StressIterateMax']) > 0)
-    ):
-        print('updating PRM values...')
-        tic = datetime.datetime.now()
-    
+    tic = datetime.datetime.now()
     if (
         ('user' not in sw['GSw_PRM_StressModel'].lower())
         or ((int(sw.GSw_PRM_StressIterateMax)) and int(sw['GSw_PRM_CapCredit']))

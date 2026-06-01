@@ -2464,7 +2464,7 @@ the method for storage is described in the [storage capacity credit](#storage-ca
 
 #### Thermal generation capacity credit
 
-For thermal generators (i.e. combined cycle, combustion turbine, nuclear (conventional and SMR), and steam (coal)), ReEDS estimates a seasonal capacity credit for each region/technology combination based on temperature-dependent forced outage rates (described in detail in [outage rates](#outage-rates)). To calculate each technology's contribution to the seasonal reserve margin, its nameplate capacity for each technology is multiplied by $(1 - \bar{FOR})$, where $\bar{FOR}$ is the mean forced outage rate during the top 20 net load hours cross all modeled [weather years](#weather-years) for each season. 
+For thermal generators (i.e. combined cycle, combustion turbine, nuclear (conventional and SMR), and steam (coal)), ReEDS estimates a seasonal capacity credit for each region/technology combination based on temperature-dependent forced outage rates (described in detail in [outage rates](#outage-rates)). To calculate each technology's contribution to the seasonal reserve margin, its nameplate capacity is multiplied by $(1 - \bar{FOR})$, where $\bar{FOR}$ is the mean forced outage rate during the top 20 net load hours cross all modeled [weather years](#weather-years) for each season. 
 
 
 #### VRE capacity credit
