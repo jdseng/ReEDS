@@ -114,7 +114,7 @@ def plot_diff(
         'Present Value of System Cost': 'Discounted Cost (Bil $)',
         'Runtime (hours)': 'processtime',
         'Runtime by year (hours)': 'processtime',
-        'NEUE (ppm)': 'neue',
+        'NEUE (ppm)': 'NEUE',
     }
     xcol = {
         'Error Check': 'dummy',
@@ -4139,14 +4139,14 @@ def plot_stressperiod_evolution(
     sw = reeds.io.get_switches(case)
     _first_metric = sw['GSw_PRM_StressThresholdMetrics'].split('/')[0].upper()
     _parts = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')
-    _level, _threshold, _metric = _parts[0], _parts[1], _parts[2]
+    _level, _threshold, _stress_metric, _metric = _parts[0], _parts[1], _parts[2], _parts[3]
     level = _level if level is None else level
     threshold = float(_threshold) if threshold is None else threshold
     metric = _metric if metric is None else metric
     ### Load NEUE results
-    infiles = sorted(glob(os.path.join(case,'outputs','neue_*.csv')))
+    infiles = sorted(glob(os.path.join(case,'outputs','NEUE_*.csv')))
     dictin_neue = {
-        tuple([int(x) for x in os.path.basename(f)[len('neue_'):-len('.csv')].split('i')]):
+        tuple([int(x) for x in os.path.basename(f)[len('NEUE_'):-len('.csv')].split('i')]):
         pd.read_csv(f, index_col=['level','metric','region'])
         for f in infiles
     }
@@ -4155,7 +4155,7 @@ def plot_stressperiod_evolution(
         pd.concat(dictin_neue, names=['year','iteration'])
         .xs(level,0,'level')
         .xs(metric,0,'metric')
-        .NEUE_ppm.unstack('region')
+        .NEUE.unstack('region')
     )
     ### Load stress periods for labels
     dfstress = get_stressperiods(case)
@@ -4226,8 +4226,8 @@ def plot_neue_bylevel(
     ### Get final iterations
     year2iteration = (
         pd.DataFrame([
-            os.path.basename(i).strip('neue_.csv').split('i')
-            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
+            os.path.basename(i).strip('NEUE_.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'NEUE_*.csv')))
         ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration
@@ -4240,12 +4240,12 @@ def plot_neue_bylevel(
     for t, iteration in year2iteration.items():
         try:
             dictin_neue[t] = (
-                reeds.io.read_output(case, f'neue_{t}i{iteration}.csv')
+                reeds.io.read_output(case, f'NEUE_{t}i{iteration}.csv')
                 .set_index(['level','metric','region']).squeeze(1)
             )
         except FileNotFoundError:
             dictin_neue[t] = (
-                reeds.io.read_output(case, f'neue_{t}i{iteration-1}.csv')
+                reeds.io.read_output(case, f'NEUE_{t}i{iteration-1}.csv')
                 .set_index(['level','metric','region']).squeeze(1)
             )
     dfin_neue = pd.concat(dictin_neue, axis=0, names=['year']).unstack('year')
@@ -4326,8 +4326,8 @@ def map_neue(
             case=case, year=year, samples=samples)
     else:
         _iteration = iteration
-    neue = reeds.io.read_output(case, f'neue_{year}i{_iteration}.csv')
-    neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE_ppm
+    neue = reeds.io.read_output(case, f'NEUE_{year}i{_iteration}.csv')
+    neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE
     sw = reeds.io.get_switches(case)
     neue_threshold = float(sw.GSw_PRM_StressThresholdNEUE.split('_')[1])
     neue_threshold_level = sw.GSw_PRM_StressThresholdNEUE.split('_')[0]
@@ -6641,8 +6641,8 @@ def map_prm(case, tmin=2023, cmap=cmocean.cm.rain, scale=3, fontsize=7, vmax=Non
     ### Get final iterations
     year2iteration = (
         pd.DataFrame([
-            os.path.basename(i).strip('neue_.csv').split('i')
-            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
+            os.path.basename(i).strip('NEUE_.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'NEUE_*.csv')))
         ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration
