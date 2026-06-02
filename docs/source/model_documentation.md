@@ -1601,10 +1601,10 @@ Air temperature, relative humidity, cold/icing shutoff indicators, modeled wind 
 
 ## Fuel Prices
 
-Natural gas prices are from the AEO2025 {cite}`eiaAnnualEnergyOutlook2025`, and coal and uranium prices are based on the AEO2026 {cite}`eiaAnnualEnergyOutlook2026`.
+Natural gas prices are from the AEO2026 {cite}`eiaAnnualEnergyOutlook2026`, and coal and uranium prices are based on the AEO2026 {cite}`eiaAnnualEnergyOutlook2026`.
 Coal prices are taken from the Alternative Electricity scenario because it provides a complete dataset through 2050 relative to the Counterfactual Baseline scenario (which has coal fully phasing out in many regions).
 Coal prices are provided for each of the nine EIA census divisions.
-Default natural gas prices and demand levels are from the AEO2025 Reference scenarios.
+Default natural gas prices and demand levels are from the AEO2026 Counterfactual Baseline scenarios.
 Low and high natural gas price alternatives are taken from the High and Low Oil and Gas Resource and Technology scenarios, respectively.
 ReEDS includes only a single national uranium price trajectory based on the AEO2026 Counterfactual Baseline scenario.
 Base fuel price trajectories are shown in {numref}`figure-input-fuel-price-assumptions`.
