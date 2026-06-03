@@ -3568,10 +3568,21 @@ def map_hybrid_pv_wind(
 def plot_dispatch_yearbymonth(
         case, t=2050, plottype='gen', periodtype='rep',
         techs=None, region=None,
-        f=None, ax=None, figsize=(12,6), highlight_rep_periods=1,
+        figsize=(12,6), highlight_rep_periods=1,
     ):
     """
     Full year dispatch for final year with rep days mapped to actual days
+
+    Usage:
+        ```python
+        plot_generator = plot_dispatch_yearbymonth(case)
+        while True:
+            try:
+                f, ax, df = next(plot_generator)
+            except StopIteration:
+                break
+        ```
+
     Inputs
     ------
     techs: None to plot all techs, or list of subset techs, or single tech string
@@ -3683,46 +3694,51 @@ def plot_dispatch_yearbymonth(
         period_szn['repnum'] = period_szn.rep_period.map(repnum)
 
     ### Plot it
-    plt.close()
-    f, ax = plots.plotyearbymonth(
-        dfplot,
-        colors=[
-            tech_color[i.replace('_pos','').replace('_neg','').replace('_off','')]
-            for i in dfplot],
-        lwforline=0, f=f, ax=ax, figsize=figsize)
+    weatheryears = [int(i) for i in sw.GSw_HourlyWeatherYears.split('_')]
+    for weatheryear in weatheryears:
+        _dfplot = dfplot.loc[str(weatheryear)]
 
-    if highlight_rep_periods:
-        width = pd.Timedelta('5D') if sw['GSw_HourlyType'] == 'wek' else pd.Timedelta('1D')
-        ylim = ax[0].get_ylim()
-        for i, row in period_szn.iterrows():
-            plottime = pd.Timestamp(2001, 1, row.timestamp.day)
-            if row.rep:
-                ## Draw an outline
-                box = mpl.patches.Rectangle(
-                    xy=(plottime, ylim[0]),
-                    width=width, height=(ylim[1]-ylim[0]),
-                    lw=0.75, edgecolor='k', facecolor='none', ls=':',
-                    clip_on=False, zorder=2e6
-                )
-            else:
-                ## Wash out the dispatch
-                box = mpl.patches.Rectangle(
-                    xy=(plottime, ylim[0]),
-                    width=width, height=(ylim[1]-ylim[0]),
-                    lw=0.75, edgecolor='none', facecolor='w', alpha=0.4,
-                    clip_on=False, zorder=1e6
-                )
-            ax[row.timestamp.month-1].add_patch(box)
-            ## Note the rep period
-            ax[row.timestamp.month-1].annotate(
-                row.repnum,
-                (plottime+pd.Timedelta('30m'), ylim[1]*0.95),
-                va='top', size=5, zorder=1e7,
-                color=('k' if row.rep else 'C7'),
-                weight=('normal' if row.rep else 'normal'),
-            )
+        plt.close()
+        f, ax = plots.plotyearbymonth(
+            _dfplot,
+            colors=[
+                tech_color[i.replace('_pos','').replace('_neg','').replace('_off','')]
+                for i in _dfplot],
+            lwforline=0, figsize=figsize)
 
-    return f, ax, dfplot
+        if highlight_rep_periods:
+            _period_szn = period_szn.loc[period_szn.year==weatheryear]
+            width = pd.Timedelta('5D') if sw['GSw_HourlyType'] == 'wek' else pd.Timedelta('1D')
+            ylim = ax[0].get_ylim()
+            for i, row in _period_szn.iterrows():
+                plottime = pd.Timestamp(2001, 1, row.timestamp.day)
+                if row.rep:
+                    ## Draw an outline
+                    box = mpl.patches.Rectangle(
+                        xy=(plottime, ylim[0]),
+                        width=width, height=(ylim[1]-ylim[0]),
+                        lw=0.75, edgecolor='k', facecolor='none', ls=':',
+                        clip_on=False, zorder=2e6
+                    )
+                else:
+                    ## Wash out the dispatch
+                    box = mpl.patches.Rectangle(
+                        xy=(plottime, ylim[0]),
+                        width=width, height=(ylim[1]-ylim[0]),
+                        lw=0.75, edgecolor='none', facecolor='w', alpha=0.4,
+                        clip_on=False, zorder=1e6
+                    )
+                ax[row.timestamp.month-1].add_patch(box)
+                ## Note the rep period
+                ax[row.timestamp.month-1].annotate(
+                    row.repnum,
+                    (plottime+pd.Timedelta('30m'), ylim[1]*0.95),
+                    va='top', size=5, zorder=1e7,
+                    color=('k' if row.rep else 'C7'),
+                    weight=('normal' if row.rep else 'normal'),
+                )
+
+        yield f, ax, _dfplot, weatheryear
 
 
 def plot_dispatch_weightwidth(
