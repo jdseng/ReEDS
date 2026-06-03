@@ -4980,8 +4980,22 @@ def map_period_dispatch(
     return f, ax, out
 
 
+def make_dayofyear_colormap(startfrom=200, fmt='%-m/%-d'):
+    """
+    Map day of year to a value in [0-1] that can be used to look up a color from a cyclic colormap
+    """
+    days_of_year = pd.date_range('2004-01-01','2004-12-31',freq='D')
+    monthdays = days_of_year.strftime(fmt)
+    colorvals = (
+        list(np.linspace(0,1,len(monthdays))[startfrom:])
+        + list(np.linspace(0,1,len(monthdays))[:startfrom])
+    )
+    monthday2val = dict(zip(monthdays, colorvals))
+    return monthday2val
+
+
 def plot_seed_stressperiods(
-    case, cmap=cmocean.cm.phase, startfrom=200,
+    case, cmap=cmocean.cm.phase,
     alpha=0.7, fontsize=5, pealpha=0.8, pelinewidth=1.5,
 ):
     """
@@ -5008,7 +5022,9 @@ def plot_seed_stressperiods(
         dictin_seed[year]['monthday'] = dictin_seed[year].timestamp.map(lambda x: x.strftime('%m-%d'))
 
     days_of_year = pd.date_range('2004-01-01','2004-12-31',freq='D')
-    monthdays = days_of_year.strftime('%m-%d')
+    fmt = '%m-%d'
+    monthdays = days_of_year.strftime(fmt)
+    monthday2val = make_dayofyear_colormap(fmt=fmt)
 
     ### Recalculate peak load days since we dropped duplicates above
     load_allyears = hourly_repperiods.get_load(
@@ -5030,26 +5046,6 @@ def plot_seed_stressperiods(
             level=sw['GSw_PRM_StressSeedLoadLevel'])
         for y in years
     }
-
-    ### Put cold colors in winter
-    colorvals = (
-        list(np.linspace(0,1,len(monthdays))[startfrom:])
-        + list(np.linspace(0,1,len(monthdays))[:startfrom])
-    )
-    monthday2val = dict(zip(monthdays, colorvals))
-
-    # ### Test it
-    # step = 5
-    # plt.close()
-    # f,ax = plt.subplots(figsize=(12,3))
-    # for x, monthday in enumerate(monthdays[::step]):
-    #     color = cmap(monthday2val[monthday])
-    #     ax.plot([x], [0], color=color, marker='o')
-    #     ax.annotate(monthday, (x, 0.015), rotation=90, ha='center', va='center', color=color)
-    # ax.set_title(startfrom)
-    # plots.despine(ax)
-    # plt.show()
-
 
     ### Plot it
     ncols = 3
@@ -5146,29 +5142,18 @@ def plot_seed_stressperiods(
     return f, ax
 
 
-def plot_repdays(case, year=None, cmap=cmocean.cm.phase, alpha=0.7, startfrom=200):
+def plot_repdays(case=None, year=None, actualday2repday=None, cmap=cmocean.cm.phase, alpha=0.7):
     """Plot representative days in (12month)x(monthdays) format"""
     ### Setup
     months = [
         'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
     ]
-    ### Get color map
-    days_of_year = pd.date_range('2004-01-01','2004-12-31',freq='D')
-    monthdays = days_of_year.strftime('%m/%d')
-    colorvals = (
-        list(np.linspace(0,1,len(monthdays))[startfrom:])
-        + list(np.linspace(0,1,len(monthdays))[:startfrom])
-    )
-    monthday2val = dict(zip(monthdays, colorvals))
 
     ### Data
-    sw = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'switches.csv'), header=None, index_col=0
-    ).squeeze(1)
-    if year is None:
-        year = int(sw.GSw_HourlyWeatherYears.split('_')[0])
+    sw = reeds.io.get_switches(case)
     stylestring = '%-m/%-d' if os.name == 'posix' else '%#m/%#d'
+    monthday2val = make_dayofyear_colormap(fmt=stylestring)
     va = 'center'
     ytext = 0.5
     if len(sw.GSw_HourlyWeatherYears.split('_')) > 1:
@@ -5176,19 +5161,22 @@ def plot_repdays(case, year=None, cmap=cmocean.cm.phase, alpha=0.7, startfrom=20
         va = 'top'
         ytext = 0.9
 
-    hmap_myr = pd.read_csv(
-        os.path.join(case, 'inputs_case', 'rep', 'hmap_myr.csv'),
-        index_col='*timestamp', parse_dates=True,
-    )
+    if actualday2repday is None:
+        hmap_myr = pd.read_csv(
+            os.path.join(case, 'inputs_case', 'rep', 'hmap_myr.csv'),
+            index_col='*timestamp', parse_dates=True,
+        )
+        hmap_myr['timestamp_rep'] = hmap_myr.h.map(reeds.timeseries.h2timestamp)
+        hmap_myr['repday'] = hmap_myr.season.map(reeds.timeseries.h2timestamp)
 
-    hmap_myr['timestamp_rep'] = hmap_myr.h.map(reeds.timeseries.h2timestamp)
-    hmap_myr['repday'] = hmap_myr.season.map(reeds.timeseries.h2timestamp)
+        if year is None:
+            year = int(sw.GSw_HourlyWeatherYears.split('_')[0])
 
-    actualday2repday = (
-        hmap_myr.loc[str(year)]
-        .drop_duplicates(['year','yearperiod'], keep='first')
-        .timestamp_rep
-    )
+        actualday2repday = (
+            hmap_myr.loc[str(year)]
+            .drop_duplicates(['year','yearperiod'], keep='first')
+            .timestamp_rep
+        )
     repdaycounts = actualday2repday.value_counts()
 
     ### Plot it
