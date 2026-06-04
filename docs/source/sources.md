@@ -1002,14 +1002,30 @@
   - [cendivweights.csv](/inputs/fuelprices/cendivweights.csv)
     - **Description:** weights to smooth gas prices between census regions to avoid abrupt price changes at the cendiv borders
     - **Indices:** r,cendiv
-  - [coal_AEO_2023_reference.csv](/inputs/fuelprices/coal_AEO_2023_reference.csv)
-    - **Description:** reference case census division fuel price of coal
-    - **Indices:** t,cendiv
-    - **Dollar year:** 2022
   - [coal_AEO_2025_reference.csv](/inputs/fuelprices/coal_AEO_2025_reference.csv)
-    - **Description:** reference case census division fuel price of coal with missing values forward-filled from earlier years
+    - **File Type:** Input
+    - **Description:** AEO2025 Reference case census division fuel price of coal with missing values forward-filled from earlier years and missing New England values set to Mid Atlantic
     - **Indices:** t,cendiv
     - **Dollar year:** 2024
+    - **Citation:** AEO2025
+    - **Units:** $/MMBtu
+
+  - [coal_AEO_2026_altelec.csv](/inputs/fuelprices/coal_AEO_2026_altelec.csv)
+    - **File Type:** Input
+    - **Description:** AEO2026 Alternative Electricity case census division fuel price of coal with missing New England values set to Mid Atlantic
+    - **Indices:** t,cendiv
+    - **Dollar year:** 2025
+    - **Citation:** AEO2026
+    - **Units:** $/MMBtu
+
+  - [coal_AEO_2026_baseline.csv](/inputs/fuelprices/coal_AEO_2026_baseline.csv)
+    - **File Type:** Input
+    - **Description:** AEO2026 Counterfactual Baseline case census division fuel price of coal with missing values forward-filled from earlier years and missing New England values set to Mid Atlantic
+    - **Indices:** t,cendiv
+    - **Dollar year:** 2025
+    - **Citation:** AEO2026
+    - **Units:** $/MMBtu
+
   - [dollaryear.csv](/inputs/fuelprices/dollaryear.csv)
     - **Description:** Dollar year mapping for each fuel price scenario
   - [h2-combustion_10.csv](/inputs/fuelprices/h2-combustion_10.csv)
