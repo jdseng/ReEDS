@@ -423,7 +423,7 @@ Some of the behavior of ReEDS2PRAS and PRAS (used for the stress periods resourc
 - ReEDS2PRAS technology representation
   - `pras_hydro_energylim` (default 1): Model hydro as energy-limited in PRAS (1) or like a thermal generator (0)
   - `pras_include_h2dac` (default 0): If set to 1, include demand associated with H2 production & DAC in PRAS
-  - `pras_trans_contingency` (default 0): Use n-0 (0) or n-1 (1) transmission capacities in PRAS
+  - `pras_trans_contingency` (default 0): Use energy (0) or PRM (1) transmission capacities in PRAS
 
 If a ReEDS case raises an out-of-memory error in ReEDS2PRAS/PRAS, the memory use can be reduced using some or all of the following settings:
 
