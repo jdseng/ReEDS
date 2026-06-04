@@ -97,9 +97,6 @@ def write_file_entries(data, main_file, file_entries, indent, githubURL):
                 if unit:
                     main_file.write(f"{indent}  - **Units:** {unit}\n\n")
 
-                
-                main_file.write("---\n\n")
-
 #Function to generate Table of Contents using folder hierarchy
 def write_folder_hierarchy(main_file, folder_hierarchy, depth=1, parent_folder=None):
     """
@@ -259,12 +256,13 @@ def main(app=None):
         current_folder["files"].append((file_name, file_ext, rel_file_path))
         
     #Generate separate readme for ReEDS 2.0 Sources files
-    main_readme_file = "sources_documentation.md"
-    main_readme_file_path = os.path.join(reeds_docs_path, main_readme_file).replace("\\","/")
+    main_readme_file = "sources.md"
+    main_readme_file_path = os.path.join(reeds_docs_path, "source", main_readme_file).replace("\\","/")
 
     #Open markdown file for entries
     with open(main_readme_file_path, "w", encoding="utf-8") as main_file:
-        main_file.write("## Table of Contents\n\n")    
+        main_file.write("# Sources Documentation\n")
+        main_file.write("## Table of Contents\n")    
 
                             
         main_file.write("\n")    
