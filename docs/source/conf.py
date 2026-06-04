@@ -18,11 +18,9 @@ project = "ReEDS"
 copyright = "2024, NREL"
 author = "NLR"
 
-
 # --setup function to run generate_markdown.py on 'make html' ---------------------------------
 def setup(app):
     app.connect("builder-inited", generate_markdown.main)
-
 
 # -- General configuration ----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

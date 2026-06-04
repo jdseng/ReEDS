@@ -2,15 +2,7 @@
 # coding: utf-8
 
 # Note: this script does not need to be run manually, 
-# sources_documentation.md is updated automatically as part of the update-sources-docs.yaml workflow
-
-# How to use this script to get an updated sources_documentation.md file: 
-# 1. update docs/sources.csv
-# 2. from the docs/source/documentation_tools folder, run: python generate_markdown.py
-#    optional args: 
-#   -g/--githubURL <base_url>   Base URL prepended to file links in markdown.
-#   -r/--reedsPath <path>       Path used to find sources.csv and write output.
-
+# sources.md is updated automatically when the documentation is built with `make html`
 
 # In[1]:
 
@@ -281,7 +273,7 @@ def main(app=None):
             main_file.write("\n## Files \n\n")
             write_file_entries(data, main_file, folder_hierarchy["files"], "", githubURL)
 
-    print("Sources Documentation Markdown file has been generated!")
+    print("sources.md has been updated!")
 
 if __name__ == "__main__":
     main()

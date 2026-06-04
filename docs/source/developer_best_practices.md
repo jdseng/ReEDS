@@ -299,11 +299,6 @@ Lastly, comparison reports are created for the USA scenario to compare the curre
 
 ## Documentation Guidelines
 
-When making changes to ReEDS, you should generate and update the sources.csv and sources_documentation.md files before merging.
-
-```{include} documentation_tools/README.md
-```
-
 ### Updating the ReEDS Documentation
 
 The ReEDS documentation lives in the "docs/source" folder within the repo. Depending on the changes you're making to the model, please update the documentation here accordingly. See the [Getting Started with Markdown in VSCode](markdown_cheat_sheet.md) if you're unfamiliar with markdown.
@@ -314,6 +309,8 @@ To edit the ReEDS documentation:
 2. Make any necessary changes and save the file
 3. Commit and push your changes as you normally would.
    - **When your pull request gets merged into main, there is a github action that will automatically recompile the documentation with your changes and publish the updated site.**
+
+Additionally, ensure you've updated the `docs/sources.csv` file when applicable.
 
 ### Viewing the Documentation Locally
 
