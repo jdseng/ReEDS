@@ -174,12 +174,11 @@ def main(app=None):
     #Conversion of latest version of sources.csv to markdown/readme format
 
     # Description holder file
-    desc_holder = 'sources.csv'
+    desc_holder = 'docs/sources.csv'
     desc_holder = desc_holder.replace("\\","/")
 
 
-    #Setting correct path to main ReEDS folder        
-    current_path = os.getcwd()
+    #Setting correct path to main ReEDS folder
     if reedsPath != '':
         reeds_path = reedsPath
     elif app is not None and hasattr(app, "srcdir"):
