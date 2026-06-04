@@ -12,7 +12,9 @@ import reeds
 tic = datetime.datetime.now()
 
 
-#%% Functions
+#%% Functions and constants
+METERS_PER_MILE = 1609.34
+
 def sort_regions(df:pd.DataFrame) -> pd.DataFrame:
     """Sort r and rr columns alphabetically"""
     dfout = df.copy()
@@ -40,6 +42,24 @@ def include_reverse_direction(df:pd.Series, indices=['r', 'rr', 'trtype']):
     return dfout
 
 
+def get_individual_lines(case, **kwargs):
+    """Get individual lines existing, prescribed, or considered in this run"""
+    sw = reeds.io.get_switches(case, **kwargs)
+    fpaths = [
+        Path(reeds.io.reeds_path, 'inputs', 'transmission', 'hvdc_existing.csv'),
+        Path(reeds.io.reeds_path, 'inputs', 'transmission', 'hvdc_planned-baseline.csv'),
+    ]
+    if sw.GSw_TransScen != 'none':
+        fpaths.append(
+            Path(
+                reeds.io.reeds_path, 'inputs', 'transmission',
+                f'hvdc_planned-{sw.GSw_TransScen}.csv'
+            )
+        )
+    lines = pd.concat([pd.read_csv(fpath, index_col='name') for fpath in fpaths])
+    return lines
+
+
 def _make_line(row):
     """Turn a lat/lon pair into a LineString geometry"""
     return shapely.LineString([[row.start_lon, row.start_lat], [row.end_lon, row.end_lat]])
@@ -56,8 +76,7 @@ def get_interface_params(case, **kwargs):
     interface_params = gpd.GeoDataFrame(interface_params, crs='EPSG:4326')
     interface_params['straight_miles'] = (
         interface_params.geometry.to_crs('EPSG:5070').length
-        ## Convert from meters to miles
-        / 1609.34
+        / METERS_PER_MILE
     )
     interface_params['squiggliness'] = interface_params.length_miles / interface_params.straight_miles
     interface_params['multiplier'] = (
@@ -71,10 +90,12 @@ def get_interface_params(case, **kwargs):
     ## resulting in duplicate values. So drop duplicates, keeping the longer route.
     interface_params = keep_longer_entry(interface_params)
     ## Include info for individual lines
+    lines = get_individual_lines(case, **kwargs)
     individual_lines = reeds.inputs.map_hvdc_lines_to_interfaces(
         case=case, filename='transmission_cost_distance_lines.csv',
         dtype='cost',
     )
+    individual_lines = individual_lines.loc[individual_lines.name.isin(lines.index)].copy()
     individual_lines = keep_longer_entry(sort_regions(individual_lines))
     keepcols = ['r', 'rr', 'polarity', 'voltage', 'cost_MUSD', 'length_miles']
     ## Only keep the individual-line values that are not already included.
@@ -551,7 +572,7 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
         axis=1,
         func=lambda x: (
             co2_storage_sites.loc[(
-                co2_storage_sites.distance(x['geometry']) / 1609.34 <= max_miles
+                co2_storage_sites.distance(x['geometry']) / METERS_PER_MILE <= max_miles
             )]
             ['cs']
             .tolist()
@@ -586,7 +607,7 @@ def calculate_co2_storage_routes(dfzones, max_miles=200):
     ## Wherever BA centroids fall within formation boundaries, assume some minimal
     # spur line distance to connect a CCS or DAC plant with an injection site
     routes_cs['miles'] = (
-        (routes_cs['distance_m'] / 1609.34)
+        (routes_cs['distance_m'] / METERS_PER_MILE)
         .clip(lower=scalars.min_co2_spurline_miles)
         .round(2)
     )
@@ -758,7 +779,7 @@ if __name__ == '__main__':
     case = Path(args.inputs_case).parent
 
     # #%% Settings for testing ###
-    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260518_transcostM0_Pacific'))
+    # case = str(Path(reeds.io.reeds_path, 'runs', 'v20260601_transcostM1_USA_faster'))
 
     #%% Set up logger
     log = reeds.log.makelog(scriptname=__file__, logpath=Path(case, 'gamslog.txt'))
