@@ -4138,9 +4138,9 @@ def plot_stressperiod_evolution(
     threshold = float(_threshold) if threshold is None else threshold
     metric = _metric if metric is None else metric
     ### Load NEUE results
-    infiles = sorted(glob(os.path.join(case,'outputs','NEUE_*.csv')))
+    infiles = sorted(glob(os.path.join(case,'outputs','neue_*.csv')))
     dictin_neue = {
-        tuple([int(x) for x in os.path.basename(f)[len('NEUE_'):-len('.csv')].split('i')]):
+        tuple([int(x) for x in os.path.basename(f)[len('neue_'):-len('.csv')].split('i')]):
         pd.read_csv(f, index_col=['level','metric','region'])
         for f in infiles
     }
@@ -4220,8 +4220,8 @@ def plot_neue_bylevel(
     ### Get final iterations
     year2iteration = (
         pd.DataFrame([
-            os.path.basename(i).strip('NEUE_.csv').split('i')
-            for i in sorted(glob(os.path.join(case, 'outputs', 'NEUE_*.csv')))
+            os.path.basename(i).strip('neue_.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
         ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration
@@ -4234,12 +4234,12 @@ def plot_neue_bylevel(
     for t, iteration in year2iteration.items():
         try:
             dictin_neue[t] = (
-                reeds.io.read_output(case, f'NEUE_{t}i{iteration}.csv')
+                reeds.io.read_output(case, f'neue_{t}i{iteration}.csv')
                 .set_index(['level','metric','region']).squeeze(1)
             )
         except FileNotFoundError:
             dictin_neue[t] = (
-                reeds.io.read_output(case, f'NEUE_{t}i{iteration-1}.csv')
+                reeds.io.read_output(case, f'neue_{t}i{iteration-1}.csv')
                 .set_index(['level','metric','region']).squeeze(1)
             )
     dfin_neue = pd.concat(dictin_neue, axis=0, names=['year']).unstack('year')
@@ -4320,7 +4320,7 @@ def map_neue(
             case=case, year=year, samples=samples)
     else:
         _iteration = iteration
-    neue = reeds.io.read_output(case, f'NEUE_{year}i{_iteration}.csv')
+    neue = reeds.io.read_output(case, f'neue_{year}i{_iteration}.csv')
     neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE
     sw = reeds.io.get_switches(case)
     neue_threshold = float(sw.GSw_PRM_StressThresholdNEUE.split('_')[1])
