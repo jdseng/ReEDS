@@ -504,20 +504,6 @@ def read_banned_tech_file(full_path, filepath, inputs_case, r_county):
     return df, nuclear_ban_regions
 
 
-def read_special_h5file(full_path):
-    """
-    Read .h5 file and make special-case adjustments if necessary:
-    - recf_distpv: drop 'distpv|' from column titles
-    """
-    filename = os.path.basename(full_path)
-    df = reeds.io.read_file(full_path, parse_timestamps=True)
-
-    if filename.startswith('recf_distpv'):
-        df.columns = df.columns.str.replace('distpv|','')
-
-    return df
-
-
 def subset_to_valid_regions(
     sw,
     region_file_entry,
@@ -559,8 +545,8 @@ def subset_to_valid_regions(
         full_path_county = full_path.replace('{lvl}', 'county')
         match filetype_in:
             case 'h5':
-                df_ba = read_special_h5file(full_path_ba)
-                df_county = read_special_h5file(full_path_county)
+                df_ba = reeds.io.read_file(full_path_ba, parse_timestamps=True)
+                df_county = reeds.io.read_file(full_path_county, parse_timestamps=True)
             case 'csv':
                 df_ba = pd.read_csv(
                     full_path_ba,
@@ -607,7 +593,7 @@ def subset_to_valid_regions(
             )
         ## Filetype conditions
         elif filetype_in == 'h5':
-            df = read_special_h5file(full_path)
+            df = reeds.io.read_file(full_path, parse_timestamps=True)
         elif filetype_in == 'csv':
             df = pd.read_csv(full_path, dtype={'FIPS':str, 'fips':str, 'cnty_fips':str}, comment='#')
         else:

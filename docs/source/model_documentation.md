@@ -1783,7 +1783,7 @@ The final \$/MW cost for a particular route is then given by the integrated \$/M
 
 Base voltage-dependent \$/mile transmission costs are taken from the Midcontinent Independent System Operator (MISO) Transmission Cost Estimation Guide {cite}`misoTransmissionCostEstimation2025`.
 The MISO Guide provides material, installation, and overhead cost estimates for transmission structures, conductors, and terrain adders, as well as right-of-way (ROW) width by voltage.
-We use MISO terrain cost adders for forests and wetland.
+We use MISO terrain cost adders for forests and wetlands.
 The MISO terrain adder for mountainous terrain is applied to "low mountain" areas from the USGS Global Mountain Explorer K3 dataset {cite}`sayreNewHighResolutionMap2018`;
 for "high mountain" areas (which are not found in the MISO footprint),
 we instead use an estimated 2.5× multiplier on base line costs from Southern California Edison 2023 {cite}`caisoParticipatingTransmissionOwner2023`,
