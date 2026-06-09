@@ -17,12 +17,56 @@ import os
 import sys
 import argparse
 import datetime
+import numpy as np
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 import reeds
 # Time the operation of this script
 tic = datetime.datetime.now()
 
+
+#%% Functions
+def smear(dfzones, dfgroups, decay_km:float=150, decay_func=np.exp) -> pd.DataFrame:
+    """Smear zones into multiple higher hierarchy levels"""
+    weights = {}
+    distances_km_all = {}
+
+    for r, row in dfzones.iterrows():
+        ## Get distance from centroid to edge of all other zones
+        ## To get edge-of-polygon-to-edge-of-polygon distance, remove .centroid below
+        ## To get centroid-to-centroid distance, add .centroid after dfgroups
+        distances_km = dfgroups.distance(row.geometry.centroid) / 1000
+        distances_km_all[r] = distances_km
+        ## Weight decays with distance from centroid
+        if decay_km != 0:
+            weight = decay_func(-distances_km / decay_km)
+        else:
+            ## 1 if zero distance, 0 otherwise
+            weight = (~distances_km.astype(bool)).astype(int)
+        weights[r] = weight
+
+    weight_df = pd.DataFrame(weights)
+    weight_norm = weight_df / weight_df.sum()
+    weight_norm = weight_norm.T
+
+    return weight_norm
+
+
+def get_zone_level_frac(
+    case=None, level='cendiv', decay_km:float=150, decay_func=np.exp,
+) -> pd.DataFrame:
+    """Smear zones for a case into higher hierarchy levels"""
+    dfmap = reeds.io.get_dfmap(reeds.io.standardize_case(case))
+    weight_norm = smear(
+        dfzones=dfmap['r'],
+        dfgroups=dfmap[level],
+        decay_km=decay_km,
+        decay_func=decay_func,
+    )
+    return weight_norm
+
+
+#%% Procedure
 #%% Parse arguments
 parser = argparse.ArgumentParser(description="""This file organizes fuel cost data by techonology""")
 
@@ -34,9 +78,8 @@ reeds_path = args.reeds_path
 inputs_case = args.inputs_case
 
 # #%% Settings for testing
-# reeds_path = 'd:\\Danny_ReEDS\\ReEDS'
-# reeds_path = os.getcwd()
-# inputs_case = os.path.join('runs','nd5_ND','inputs_case')
+# reeds_path = reeds.io.reeds_path
+# inputs_case = os.path.join(reeds_path,'runs','nd5_ND','inputs_case')
 
 #%% Set up logger
 log = reeds.log.makelog(
@@ -131,6 +174,11 @@ ngprice = ngprice.drop('cendiv', axis=1)
 ngprice = ngprice[['year','r','value']].rename(columns={'year':'t','value':'naturalgas'})
 ngprice.naturalgas = ngprice.naturalgas.round(6)
 
+# Census division weights
+cendivweights = get_zone_level_frac(
+    inputs_case, level='cendiv', decay_km=float(sw.GSw_GasRegionSmooth),
+).round(3)
+
 # Combine all fuel data
 fuel = coal.merge(uranium,on=['t','r'],how='left')
 fuel = fuel.merge(ngprice,on=['t','r'],how='left')
@@ -167,6 +215,7 @@ ngprice_cendiv.to_csv(os.path.join(inputs_case,'gasprice_ref.csv'))
 ngdemand.to_csv(os.path.join(inputs_case,'ng_demand_elec.csv'))
 ngtotdemand.to_csv(os.path.join(inputs_case,'ng_demand_tot.csv'))
 alpha.to_csv(os.path.join(inputs_case,'alpha.csv'))
+cendivweights.to_csv(os.path.join(inputs_case,'cendivweights.csv'))
 
 reeds.log.toc(tic=tic, year=0, process='input_processing/fuelcostprep.py', 
     path=os.path.join(inputs_case,'..'))
