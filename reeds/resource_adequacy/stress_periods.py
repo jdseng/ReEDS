@@ -681,7 +681,7 @@ def main(sw, t, iteration=0, logging=True):
         _neue_simple = get_and_write_neue(sw, write=True)
         ## TODO: check if need to refactor or remove
 
-        for stress_metric in ['EUE', 'NEUE', 'LOLE', 'LOLH']:
+        for stress_metric in ['EUE', 'NEUE', 'LOLH']:
             print(f"Calculating and writing annual {stress_metric} for iteration {iteration}")
             dfmetric = get_annual_stress_metric(sw.casedir, t, stress_metric, iteration=iteration)
 
