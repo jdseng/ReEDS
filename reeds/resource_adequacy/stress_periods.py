@@ -269,9 +269,13 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
 
         day = pd.Timestamp('-'.join(row[['y','m','d']].astype(str).tolist()))
 
+        start_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
+        end_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
+
         start_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
         end_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
 
+        day_eue = high_eue_periods[criterion, f'high_{stress_metric}'].loc[i,'EUE']
         day_index = np.where(
             timeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
         )[0][0]
@@ -280,7 +284,8 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
         day_after = timeindex[(day_index + periodhours) % len(timeindex)]
 
         if (
-            (cutofftype[:3] == 'cap') and (end_headspace_frac  >= float(cutoff))
+            ((cutofftype == 'eue') and (end_headspace_MWh / day_eue >= float(cutoff)))
+            or ((cutofftype[:3] == 'cap') and (end_headspace_frac  >= float(cutoff)))
             or (cutofftype[:3] == 'abs')
         ):
             shoulder_periods[criterion, f'after_{row.name}'] = pd.Series({
@@ -290,7 +295,8 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
             print(f"Added {day_after} as shoulder stress period after {day}")
 
         if (
-            (cutofftype[:3] == 'cap') and (start_headspace_frac  >= float(cutoff))
+            ((cutofftype == 'eue') and (start_headspace_MWh / day_eue >= float(cutoff)))
+            or ((cutofftype[:3] == 'cap') and (start_headspace_frac  >= float(cutoff)))
             or (cutofftype[:3] == 'abs')
         ):
             shoulder_periods[criterion, f'before_{row.name}'] = pd.Series({
@@ -373,9 +379,10 @@ def _evaluate_stress_threshold_criterion(
 
         ### Include "shoulder periods" before or after each period
         ### if the storage state of charge is low
+        use_metric_for_shoulder_periods = {'EUE':'EUE', 'NEUE':'NEUE', 'LOLH':'EUE'}  
         _shoulder_periods = {
             **_shoulder_periods,
-            **get_shoulder_periods(sw, criterion, dfenergy_r, _high_stress_periods, stress_metric)
+            **get_shoulder_periods(sw, criterion, dfenergy_r, _high_stress_periods, stress_metric=use_metric_for_shoulder_periods.get(stress_metric))
         }
 
         stress_criteria['stress_sorted_periods'] = _stress_sorted_periods
