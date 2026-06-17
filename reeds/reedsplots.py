@@ -116,7 +116,7 @@ def plot_diff(
         'Present Value of System Cost': 'Discounted Cost (Bil $)',
         'Runtime (hours)': 'processtime',
         'Runtime by year (hours)': 'processtime',
-        'NEUE (ppm)': 'NEUE',
+        'NEUE (ppm)': 'neue',
     }
     xcol = {
         'Error Check': 'dummy',
