@@ -186,7 +186,13 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     """
     ### Get values from PRAS
     # Use EUE for outages duration calculation
-    use_metric_for_pras = {'EUE':'EUE', 'NEUE':'EUE', 'LOLH':'LOLE', 'OutageDuration':'EUE'}  
+    use_metric_for_pras = {'EUE':'EUE',
+                           'NEUE':'EUE',
+                           'LOLH':'LOLE',
+                           'OutageDuration':'EUE',
+                           'OutageMagnitude':'EUE',
+                           'NormalizedOutageMagnitude':'EUE',
+                           }
     dfmetric = get_pras_stress_metric(  
         case=case,  
         t=t,  
@@ -195,7 +201,7 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     )  
 
     ### Get load (for calculating NEUE)
-    if stress_metric.upper() == 'NEUE':
+    if stress_metric.upper() == 'NEUE' or stress_metric == 'NormalizedOutageMagnitude':
         dfload = reeds.io.read_h5py_file(
             os.path.join(
                 case,'handoff','reeds_data',f'pras_load_{t}.h5')
@@ -207,6 +213,19 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     for hierarchy_level in levels:
         ### Get the region aggregator
         rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
+
+        if stress_metric in ['OutageDuration','OutageMagnitude','NormalizedOutageMagnitude']:
+            _metric[hierarchy_level, 'sum'] = get_sum_duration_outage(dfmetric)
+
+            ## TODO: for 'sum', OutageMagnitude returns the same value as `sum` for OutageDuration
+            if stress_metric == 'OutageMagnitude':
+                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric)            
+            if stress_metric == 'NormalizedOutageMagnitude':
+                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric) / dfload.max()
+            if stress_metric == 'OutageDuration':
+                _metric[hierarchy_level, 'max'] = get_max_duration_outage(dfmetric)
+            
+            continue
 
         ### Get stress metric summed over year
         _metric[hierarchy_level,'sum'] = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
@@ -225,10 +244,6 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
                 / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
             ).max() * 1e6
 
-        if stress_metric.upper() == 'OutageDuration':
-            dfmetric_agg = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
-            _metric[hierarchy_level, 'max'] = get_longest_outage(dfmetric_agg)
-        
     ### Combine it
     metric = pd.concat(_metric, names=['level','metric','region']).rename(f'{stress_metric}')
 
@@ -694,56 +709,69 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
     return prm_next_iteration
 
 
-def get_longest_outage_run(series: pd.Series, eue_threshold: float = 0):
-    """Find the longest consecutive outage in a single-region EUE timeseries.
+def get_max_duration_outage(dfmetric, eue_threshold = 0):
+    """Return the longest consecutive outage event in hours per region.
+
+    Check regions hourly EUE timeseries for runs of contiguous hours where
+    EUE exceeds ``eue_threshold``, and returns the length of the longest such run.
+    A single isolated hour counts as 1.
 
     Args:
-        series (pd.Series): Hourly EUE values for one region, indexed by timestamp.
-        eue_threshold (float, optional): Minimum EUE threshold in MW to count as an outage
-            hour. Hours with EUE <= this value are treated as no-outage. Defaults to 0
-            (any positive shortfall counts).
+        dfmetric (pd.DataFrame): Hourly EUE values (MW) indexed by timestamp, one
+            column per region. Typically obtained from :func:`get_pras_stress_metric`.
+        eue_threshold (float, optional): Minimum EUE (MW) to qualify as an outage
+            hour. Hours at or below this value are treated as no-outage. Defaults to
+            0 (any positive shortfall counts).
 
     Returns:
-        tuple: (duration_hours, start_timestamp, end_timestamp) for the longest
-            consecutive outage. Returns (0, None, None) if no outage hours exist.
+        pd.Series: Length in hours of the longest consecutive outage event, indexed
+            by region. Regions with no outage hours return 0.
     """
-    is_outage = series > eue_threshold
-    group_id = (is_outage != is_outage.shift()).cumsum()
-    outage_groups = series[is_outage].groupby(group_id[is_outage])
-    if outage_groups.ngroups == 0:
-        return 0, None, None
-    run_idx = outage_groups.get_group(outage_groups.size().idxmax()).index
-    return len(run_idx), run_idx[0], run_idx[-1]
+    def _max_run(series):
+        is_outage = series > eue_threshold
+        groups = (is_outage != is_outage.shift()).cumsum()[is_outage]
+        return series[is_outage].groupby(groups).size().max() if is_outage.any() else 0
+    return dfmetric.apply(_max_run)
 
 
-def get_longest_outage(dfmetric, eue_threshold: float = 0):
-    """Return the longest consecutive outage in hours per region.
+def get_sum_duration_outage(dfmetric, eue_threshold = 0):
+    """Return the total number of outage hours per region.
 
-    Operates on an hourly EUE DataFrame already aggregated to the desired hierarchy
-    level — the same ``dfmetric`` computed internally by :func:`get_stress_metric_periods`.
-    Passing it in avoids re-reading the PRAS file.
+    Counts every hour in the timeseries where EUE exceeds ``eue_threshold``
+    
+    Args:
+        dfmetric (pd.DataFrame): Hourly EUE values (MW) indexed by timestamp, one
+            column per region. Typically obtained from :func:`get_pras_stress_metric`.
+        eue_threshold (float, optional): Minimum EUE (MW) to qualify as an outage
+            hour. Hours at or below this value are excluded. Defaults to 0.
+
+    Returns:
+        pd.Series: Total outage hours over the full timeseries, indexed by region.
+            Regions with no outage hours return 0.
+    """
+    return (dfmetric > eue_threshold).sum()
+
+
+def get_max_magnitude_outage(dfmetric):
+    """Return the peak single-hour EUE per region (MW).
+
+    Finds the highest magnitude of shortfall for each region. Hours at or
+    below ``eue_threshold`` are masked before taking the maximum, so they cannot
+    inflate the result. Regions with no outage hours return 0.
 
     Args:
-        dfmetric (pd.DataFrame): Hourly EUE values indexed by timestamp, one column per
-            aggregated region. Typically obtained by calling :func:`get_pras_stress_metric`
-            and grouping columns to the desired hierarchy level.
-        eue_threshold (float, optional): Minimum EUE in MW to count as an outage hour.
-            Hours at or below this value are treated as no-outage. Defaults to 0
-            (any positive shortfall counts).
+        dfmetric (pd.DataFrame): Hourly EUE values (MW) indexed by timestamp, one
+            column per region. Typically obtained from :func:`get_pras_stress_metric`.
+        eue_threshold (float, optional): Minimum EUE (MW) to qualify as an outage
+            hour. Hours at or below this value are excluded. Defaults to 0.
 
     Returns:
-        pd.DataFrame: One row per region with columns:
-            - ``duration_hours``: length of the longest consecutive outage in hours.
-            - ``start``: timestamp of the first hour of that outage.
-            - ``end``: timestamp of the last hour of that outage.
+        pd.Series: Peak hourly EUE (MW) over the full timeseries, indexed by region.
+            Regions with no outage hours return 0.
     """
-    rows = []
-    for region in dfmetric.columns:
-        n_hours, outage_start, outage_end = get_longest_outage_run(dfmetric[region], eue_threshold=eue_threshold)
-        # rows.append({'region': region, 'duration_hours': n_hours, 'start': outage_start, 'end': outage_end})
-        rows.append({'region': region, 'duration_hours': n_hours})
+    return dfmetric.max()
 
-    return pd.DataFrame(rows).set_index('region')
+
 #%%### Procedure
 def main(sw, t, iteration=0, logging=True):
     """
@@ -754,7 +782,7 @@ def main(sw, t, iteration=0, logging=True):
         _neue_simple = get_and_write_neue(sw, write=True)
         ## TODO: check if need to refactor or remove
 
-        for stress_metric in ['EUE', 'NEUE', 'LOLH']:
+        for stress_metric in ['EUE', 'NEUE', 'LOLH', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']:
             print(f"Calculating and writing annual {stress_metric} for iteration {iteration}")
             dfmetric = get_annual_stress_metric(sw.casedir, t, stress_metric, iteration=iteration)
 
