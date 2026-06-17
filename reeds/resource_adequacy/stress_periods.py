@@ -185,7 +185,8 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     """
     """
     ### Get values from PRAS
-    use_metric_for_pras = {'EUE':'EUE', 'NEUE':'EUE', 'LOLH':'LOLE'}  
+    # Use EUE for outages duration calculation
+    use_metric_for_pras = {'EUE':'EUE', 'NEUE':'EUE', 'LOLH':'LOLE', 'OutageDuration':'EUE'}  
     dfmetric = get_pras_stress_metric(  
         case=case,  
         t=t,  
@@ -223,9 +224,11 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
                 dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
                 / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
             ).max() * 1e6
+
+        if stress_metric.upper() == 'OutageDuration':
+            dfmetric_agg = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
+            _metric[hierarchy_level, 'max'] = get_longest_outage(dfmetric_agg)
         
-
-
     ### Combine it
     metric = pd.concat(_metric, names=['level','metric','region']).rename(f'{stress_metric}')
 
@@ -691,6 +694,56 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
     return prm_next_iteration
 
 
+def get_longest_outage_run(series: pd.Series, eue_threshold: float = 0):
+    """Find the longest consecutive outage in a single-region EUE timeseries.
+
+    Args:
+        series (pd.Series): Hourly EUE values for one region, indexed by timestamp.
+        eue_threshold (float, optional): Minimum EUE threshold in MW to count as an outage
+            hour. Hours with EUE <= this value are treated as no-outage. Defaults to 0
+            (any positive shortfall counts).
+
+    Returns:
+        tuple: (duration_hours, start_timestamp, end_timestamp) for the longest
+            consecutive outage. Returns (0, None, None) if no outage hours exist.
+    """
+    is_outage = series > eue_threshold
+    group_id = (is_outage != is_outage.shift()).cumsum()
+    outage_groups = series[is_outage].groupby(group_id[is_outage])
+    if outage_groups.ngroups == 0:
+        return 0, None, None
+    run_idx = outage_groups.get_group(outage_groups.size().idxmax()).index
+    return len(run_idx), run_idx[0], run_idx[-1]
+
+
+def get_longest_outage(dfmetric, eue_threshold: float = 0):
+    """Return the longest consecutive outage in hours per region.
+
+    Operates on an hourly EUE DataFrame already aggregated to the desired hierarchy
+    level — the same ``dfmetric`` computed internally by :func:`get_stress_metric_periods`.
+    Passing it in avoids re-reading the PRAS file.
+
+    Args:
+        dfmetric (pd.DataFrame): Hourly EUE values indexed by timestamp, one column per
+            aggregated region. Typically obtained by calling :func:`get_pras_stress_metric`
+            and grouping columns to the desired hierarchy level.
+        eue_threshold (float, optional): Minimum EUE in MW to count as an outage hour.
+            Hours at or below this value are treated as no-outage. Defaults to 0
+            (any positive shortfall counts).
+
+    Returns:
+        pd.DataFrame: One row per region with columns:
+            - ``duration_hours``: length of the longest consecutive outage in hours.
+            - ``start``: timestamp of the first hour of that outage.
+            - ``end``: timestamp of the last hour of that outage.
+    """
+    rows = []
+    for region in dfmetric.columns:
+        n_hours, outage_start, outage_end = get_longest_outage_run(dfmetric[region], eue_threshold=eue_threshold)
+        # rows.append({'region': region, 'duration_hours': n_hours, 'start': outage_start, 'end': outage_end})
+        rows.append({'region': region, 'duration_hours': n_hours})
+
+    return pd.DataFrame(rows).set_index('region')
 #%%### Procedure
 def main(sw, t, iteration=0, logging=True):
     """
