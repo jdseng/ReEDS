@@ -4129,7 +4129,7 @@ def plot_stressperiod_evolution(
     sw = reeds.io.get_switches(case)
     _first_metric = sw['GSw_PRM_StressThresholdMetrics'].split('/')[0].upper()
     _parts = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')
-    _level, _threshold, _stress_metric, _metric = _parts[0], _parts[1], _parts[2], _parts[3]
+    _level, _threshold, _metric = _parts[0], _parts[1], _parts[2]
     level = _level if level is None else level
     threshold = float(_threshold) if threshold is None else threshold
     metric = _metric if metric is None else metric
