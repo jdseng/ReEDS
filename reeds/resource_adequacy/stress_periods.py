@@ -442,7 +442,10 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
     stress_metric_switches = sw.GSw_PRM_StressThresholdMetrics.split('/')
     
     # stress periods column names for writing outputs
-    stress_metrics_units = {'EUE':'MWh/year', 'NEUE':'ppm', 'LOLH':'event-h/year', 'LOLE':'event-day/year'}
+    stress_metrics_units = {
+        'EUE':'MWh/year', 'NEUE':'ppm', 'LOLH':'event-h/year', 'LOLE':'event-day/year',
+        'OutageDuration':'h', 'OutageMagnitude':'MW', 'NormalizedOutageMagnitude':'p.u. of load',
+    }
     stress_metrics_col_names = {m:f'{m}_{stress_metrics_units[m]}' for m in 
                                 stress_metric_switches}
     
