@@ -320,7 +320,8 @@ def check_compatibility(sw):
     ### Check that the stress metrics specified in GSw_PRM_StressThresholdMetrics
     # have corresponding GSw_PRM_StressThreshold{metric} switches
     ## TODO: Check a regex way to list the switches 
-    stressThresholdMetricSwitches = ['NEUE','LOLH']
+    stressThresholdMetricSwitches = ['NEUE','LOLH', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']
+    UpperstressThresholdMetricSwitches = [s.upper() for s in stressThresholdMetricSwitches]
     stressThresholdMetrics = sw['GSw_PRM_StressThresholdMetrics'].split('/')
     
     # if int(sw['GSw_PRM_UpdateMethod']) == 1 or 'EUE' not in stressThresholdMetrics:
@@ -333,7 +334,7 @@ def check_compatibility(sw):
         
     # Threshold metric added but not specified as a switch
     for metric in stressThresholdMetrics:
-        if metric.upper() not in stressThresholdMetricSwitches:
+        if metric.upper() not in UpperstressThresholdMetricSwitches:
             raise NotImplementedError(f"GSw_PRM_StressThreshold{metric} is not specified as a switch.")
             
     for stress_metric in stressThresholdMetricSwitches:
@@ -353,11 +354,11 @@ def check_compatibility(sw):
                     f"stress value in GSw_PRM_StressThreshold{stress_metric} must be a positive number "
                     f"but '{stress_value}' was provided"
                 )
-            if stress_metric.upper() not in stressThresholdMetricSwitches:
-                raise ValueError(
-                    f"stress metric in GSw_PRM_StressThreshold{stress_metric} must be in {stressThresholdMetricSwitches}"
-                    f"but '{stress_metric}' was provided"
-                )
+            # if stress_metric.upper() not in UpperstressThresholdMetricSwitches:
+            #     raise ValueError(
+            #         f"stress metric in GSw_PRM_StressThreshold{stress_metric} must be in {stressThresholdMetricSwitches}"
+            #         f"but '{stress_metric}' was provided"
+            #     )
         
     if sw['GSw_PRM_StressStorageCutoff'].lower() not in ['off','0','false']:
         metric, value = sw['GSw_PRM_StressStorageCutoff'].split('_')
