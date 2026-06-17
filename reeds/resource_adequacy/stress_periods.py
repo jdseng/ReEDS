@@ -43,6 +43,7 @@ def get_pras_stress_metric(case, t, iteration=0, stress_metric:Literal['EUE','LO
 
     return dfmetric
 
+
 def get_stress_metric_periods(
         case, t, iteration=0,
         hierarchy_level='transgrp',
@@ -75,7 +76,12 @@ def get_stress_metric_periods(
     # Use EUE metric for both EUE and NEUE calculations, since the load division to get NEUE is
     # peformed afterwards based on agg_period. 
     use_metric_for_pras = {'EUE':'EUE', 'NEUE':'EUE', 'LOLH':'LOLE'}
-    dfmetric = get_pras_stress_metric(case=case, t=t, iteration=iteration, stress_metric=use_metric_for_pras.get(stress_metric))
+    dfmetric = get_pras_stress_metric(
+        case=case,
+        t=t,
+        iteration=iteration,
+        stress_metric=use_metric_for_pras.get(stress_metric)
+    )
     ## Aggregate to hierarchy_level
     dfmetric = (
         dfmetric
@@ -174,6 +180,7 @@ def get_and_write_neue(sw, write=True):
         eue.to_csv(os.path.join(sw['casedir'],'outputs','eue.csv'))
     return neue
 
+
 def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     """
     """
@@ -208,19 +215,22 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
 
         if stress_metric.upper() == 'NEUE':
             _metric[hierarchy_level,'sum'] = (
-            dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
-            / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
+                dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
+                / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
             ) * 1e6
             ### Get max NEUE hour
             _metric[hierarchy_level,'max'] = (
                 dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
                 / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
             ).max() * 1e6
+        
+
 
     ### Combine it
     metric = pd.concat(_metric, names=['level','metric','region']).rename(f'{stress_metric}')
 
     return metric
+
 
 def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_metric):
     ## Stop if not needed
@@ -290,6 +300,7 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
             print(f"Added {day_before} as shoulder stress period before {day}")
 
     return shoulder_periods
+
 
 def _evaluate_stress_threshold_criterion(  
     stress_criteria,  
@@ -377,6 +388,7 @@ def _evaluate_stress_threshold_criterion(
 
     return stress_criteria
     
+
 def get_stress_metrics_sorted_periods(sw, t, iteration):
     ### Get storage state of charge (SOC) to use in selection of "shoulder" stress periods
     dfenergy = reeds.io.read_pras_results(
@@ -480,6 +492,7 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
     plot_stress_diagnostics(sw, t, iteration, high_stress_periods)
 
     return failed, new_stressperiods_write, combined_periods_write
+
 
 def prm_increment_pras(sw, t, iteration, combined_periods_write, failed_regions):
     try:
