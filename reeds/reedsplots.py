@@ -6632,8 +6632,8 @@ def map_prm(case, tmin=2023, cmap=cmocean.cm.rain, scale=3, fontsize=7, vmax=Non
     ### Get final iterations
     year2iteration = (
         pd.DataFrame([
-            os.path.basename(i).strip('NEUE_.csv').split('i')
-            for i in sorted(glob(os.path.join(case, 'outputs', 'NEUE_*.csv')))
+            os.path.basename(i).strip('neue_.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
         ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration
