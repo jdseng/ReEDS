@@ -320,7 +320,7 @@ def check_compatibility(sw):
     ### Check that the stress metrics specified in GSw_PRM_StressThresholdMetrics
     # have corresponding GSw_PRM_StressThreshold{metric} switches
     ## TODO: Check a regex way to list the switches 
-    stressThresholdMetricSwitches = ['NEUE','LOLH', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']
+    stressThresholdMetricSwitches = ['NEUE','LOLH','LOLE', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']
     UpperstressThresholdMetricSwitches = [s.upper() for s in stressThresholdMetricSwitches]
     stressThresholdMetrics = sw['GSw_PRM_StressThresholdMetrics'].split('/')
     
