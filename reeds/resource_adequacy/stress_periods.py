@@ -75,7 +75,10 @@ def get_stress_metric_periods(
     ### Get stress metric from PRAS
     # Use EUE metric for both EUE and NEUE calculations, since the load division to get NEUE is
     # peformed afterwards based on agg_period. 
-    use_metric_for_pras = {'EUE':'EUE', 'NEUE':'EUE', 'LOLH':'LOLE'}
+    use_metric_for_pras = {
+        'EUE': 'EUE', 'NEUE': 'EUE', 'LOLH': 'LOLE', 'LOLE': 'LOLE',
+        'OutageDuration': 'EUE', 'OutageMagnitude': 'EUE', 'NormalizedOutageMagnitude': 'EUE',
+    }
     dfmetric = get_pras_stress_metric(
         case=case,
         t=t,
@@ -189,16 +192,17 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
     use_metric_for_pras = {'EUE':'EUE',
                            'NEUE':'EUE',
                            'LOLH':'LOLE',
+                           'LOLE':'LOLE',
                            'OutageDuration':'EUE',
                            'OutageMagnitude':'EUE',
                            'NormalizedOutageMagnitude':'EUE',
                            }
-    dfmetric = get_pras_stress_metric(  
-        case=case,  
-        t=t,  
-        iteration=iteration,  
-        stress_metric=use_metric_for_pras[stress_metric],  
-    )  
+    dfmetric = get_pras_stress_metric(
+        case=case,
+        t=t,
+        iteration=iteration,
+        stress_metric=use_metric_for_pras[stress_metric],
+    )
 
     ### Get load (for calculating NEUE)
     if stress_metric.upper() == 'NEUE' or stress_metric == 'NormalizedOutageMagnitude':
@@ -214,17 +218,28 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
         ### Get the region aggregator
         rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
 
+        if stress_metric == 'LOLE':
+            # Count a day as an event-day if at least one hour has LOLE > 0
+            dfmetric_agg = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
+            daily_max = dfmetric_agg.groupby(
+                [dfmetric_agg.index.year, dfmetric_agg.index.month, dfmetric_agg.index.day]
+            ).max()
+            event_days = (daily_max > 0).sum()
+            _metric[hierarchy_level, 'sum'] = event_days
+            _metric[hierarchy_level, 'max'] = event_days
+            continue
+
         if stress_metric in ['OutageDuration','OutageMagnitude','NormalizedOutageMagnitude']:
             _metric[hierarchy_level, 'sum'] = get_sum_duration_outage(dfmetric)
 
             ## TODO: for 'sum', OutageMagnitude returns the same value as `sum` for OutageDuration
             if stress_metric == 'OutageMagnitude':
-                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric)            
+                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric)
             if stress_metric == 'NormalizedOutageMagnitude':
                 _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric) / dfload.max()
             if stress_metric == 'OutageDuration':
                 _metric[hierarchy_level, 'max'] = get_max_duration_outage(dfmetric)
-            
+
             continue
 
         ### Get stress metric summed over year
@@ -397,7 +412,7 @@ def _evaluate_stress_threshold_criterion(
 
         ### Include "shoulder periods" before or after each period
         ### if the storage state of charge is low
-        use_metric_for_shoulder_periods = {'EUE':'EUE', 'NEUE':'NEUE', 'LOLH':'EUE'}  
+        use_metric_for_shoulder_periods = {'EUE':'EUE', 'NEUE':'NEUE', 'LOLH':'EUE', 'LOLE':'EUE'}
         _shoulder_periods = {
             **_shoulder_periods,
             **get_shoulder_periods(sw, criterion, dfenergy_r, _high_stress_periods, stress_metric=use_metric_for_shoulder_periods.get(stress_metric))
@@ -450,7 +465,7 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
                                 stress_metric_switches}
     
     for stress_metric in stress_metric_switches:
-        for criterion in sw[f'GSw_PRM_StressThreshold{stress_metric.upper()}'].split('/'):
+        for criterion in sw[f'GSw_PRM_StressThreshold{stress_metric}'].split('/'):
             print(f"Evaluating GSw_PRM_StressThreshold {stress_metric.upper()} with criterion: {criterion}")
             stress_criteria = _evaluate_stress_threshold_criterion(
                 stress_criteria,
@@ -785,7 +800,7 @@ def main(sw, t, iteration=0, logging=True):
         _neue_simple = get_and_write_neue(sw, write=True)
         ## TODO: check if need to refactor or remove
 
-        for stress_metric in ['EUE', 'NEUE', 'LOLH', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']:
+        for stress_metric in ['EUE', 'NEUE', 'LOLH', 'LOLE', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']:
             print(f"Calculating and writing annual {stress_metric} for iteration {iteration}")
             dfmetric = get_annual_stress_metric(sw.casedir, t, stress_metric, iteration=iteration)
 
