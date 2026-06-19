@@ -308,7 +308,7 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
         start_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
         end_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
 
-        day_eue = high_eue_periods[criterion, f'high_{stress_metric}'].loc[i,'EUE']
+        day_eue = high_eue_periods[criterion, f'high_{stress_metric}'].loc[i, stress_metric]
         day_index = np.where(
             timeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
         )[0][0]
@@ -412,10 +412,38 @@ def _evaluate_stress_threshold_criterion(
 
         ### Include "shoulder periods" before or after each period
         ### if the storage state of charge is low
-        use_metric_for_shoulder_periods = {'EUE':'EUE', 'NEUE':'NEUE', 'LOLH':'EUE', 'LOLE':'EUE'}
+        # Maintain EUE to be used for determining shoulder periods
+        stress_metric_for_shoulder_periods = 'EUE'
+        eue_periods = get_stress_metric_periods(
+            case=sw.casedir, t=t, iteration=iteration,
+            hierarchy_level=hierarchy_level,
+            stress_metric=stress_metric_for_shoulder_periods,
+            period_agg_method=period_agg_method,
+        )
+
+        _eue_sorted = (
+            eue_periods
+            .sort_values(stress_metric_for_shoulder_periods, ascending=False)
+            .reset_index().set_index('actual_period')
+        )
+
+        _high_stress_periods[criterion, f'high_{stress_metric_for_shoulder_periods}'] = (
+            _eue_sorted.loc[
+                _eue_sorted.r.isin(_failed[criterion].index)
+                & ~(_eue_sorted.index.isin(stressperiods_this_iteration.actual_period))
+            ]
+            .drop_duplicates(subset=['y','m','d'])
+            .groupby('r').head(int(sw.GSw_PRM_StressIncrement))
+        )
+
         _shoulder_periods = {
             **_shoulder_periods,
-            **get_shoulder_periods(sw, criterion, dfenergy_r, _high_stress_periods, stress_metric=use_metric_for_shoulder_periods.get(stress_metric))
+            **get_shoulder_periods(
+                                sw,
+                                criterion,
+                                dfenergy_r,
+                                _high_stress_periods,
+                                stress_metric=stress_metric_for_shoulder_periods)
         }
 
         stress_criteria['stress_sorted_periods'] = _stress_sorted_periods
