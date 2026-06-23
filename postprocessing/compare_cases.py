@@ -193,7 +193,6 @@ plotdiffvals = [
     'Bulk System Electricity Pric',
     'National Average Electricity',
     'Present Value of System Cost',
-    'NEUE (ppm)',
     'Runtime (hours)',
     'Runtime by year (hours)',
 ]

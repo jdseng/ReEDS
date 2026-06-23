@@ -1,10 +1,7 @@
 #%%### General imports
 import os
-import traceback
 import pandas as pd
 import numpy as np
-from glob import glob
-import re
 import matplotlib.pyplot as plt
 from pathlib import Path
 from typing import Literal
@@ -154,44 +151,6 @@ def plot_stress_diagnostics(sw, t, iteration, high_stress_periods):
             plt.close()
     except Exception as err:
         print(err)
-
-
-def get_and_write_neue(sw, write=True):
-    """
-    Write dropped load across all completed years to outputs
-    so it can be plotted alongside other ReEDS outputs.
-
-    Notes
-    -----
-    * The denominator of NEUE is exogenous electricity demand; it does not include
-    endogenous load from losses or H2 production or exogenous H2 demand.
-    """
-    infiles = [
-        i for i in sorted(glob(
-            os.path.join(sw['casedir'], 'handoff', 'PRAS', 'PRAS_*.h5')))
-        if re.match(r"PRAS_[0-9]+i[0-9]+.h5", os.path.basename(i))
-    ]
-    eue = {}
-    for infile in infiles:
-        year_iteration = os.path.basename(infile)[len('PRAS_'):-len('.h5')].split('i')
-        year = int(year_iteration[0])
-        iteration = int(year_iteration[1])
-        eue[year,iteration] = reeds.io.read_pras_results(infile)['USA_EUE'].sum()
-    eue = pd.Series(eue).rename('MWh')
-    eue.index = eue.index.rename(['year','iteration'])
-
-    load = reeds.io.read_file(os.path.join(sw['casedir'],'inputs_case','load.h5'))
-    loadyear = load.sum(axis=1).groupby('year').sum()
-
-    neue = (
-        (eue / loadyear * 1e6).rename('NEUE [ppm]')
-        .rename_axis(['t','iteration']).sort_index()
-    )
-
-    if write:
-        neue.to_csv(os.path.join(sw['casedir'],'outputs','neue.csv'))
-        eue.to_csv(os.path.join(sw['casedir'],'outputs','eue.csv'))
-    return neue
 
 
 def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
@@ -853,20 +812,10 @@ def main(sw, t, iteration=0, logging=True):
     """
     """
     #%% Write consolidated stress metrics so far
-    try:
-        ## TODO: Remove get_and_write_neue()
-        _neue_simple = get_and_write_neue(sw, write=True)
-
-        ra_metrics = calc_ra_metrics(case=sw.casedir, t=t, iteration=iteration)
-        ra_metrics.round(3).to_csv(
-            os.path.join(sw.casedir, 'outputs', f'ra_metrics_{t}i{iteration}.csv')
-        )
-
-    except Exception as err:
-        if int(sw['pras']) == 2:
-            print(traceback.format_exc())
-        if int(sw.GSw_PRM_StressIterateMax):
-            raise Exception(err)
+    ra_metrics = calc_ra_metrics(case=sw.casedir, t=t, iteration=iteration)
+    ra_metrics.round(3).to_csv(
+        os.path.join(sw.casedir, 'outputs', f'ra_metrics_{t}i{iteration}.csv')
+    )
 
     #%% Stop here if not iterating or if before ReEDS can build new capacity
     if (not int(sw.GSw_PRM_StressIterateMax)) or (t < int(sw['GSw_StartMarkets'])):
