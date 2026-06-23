@@ -81,7 +81,7 @@ def get_stress_metric_periods(
 
     ### Get stress metric from PRAS
     # Use EUE metric for both EUE and NEUE calculations, since the load division to get NEUE is
-    # peformed afterwards based on agg_period. 
+    # peformed afterwards based on agg_period.
     use_metric_for_pras = {
         'EUE': 'EUE',
         'NEUE': 'EUE',
@@ -108,7 +108,7 @@ def get_stress_metric_periods(
         .groupby([dfmetric.index.year, dfmetric.index.month, dfmetric.index.day])
         .agg(period_agg_method)
         .rename_axis(['y','m','d'])
-    )  
+    )
 
     ### Sort and drop zeros and duplicates
     dfmetric_top = (
@@ -423,22 +423,22 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
     return shoulder_periods
 
 
-def _evaluate_stress_threshold_criterion(  
-    stress_criteria,  
-    criterion,  
-    sw,  
-    t,  
-    iteration,  
-    dfenergy_r,  
-    stressperiods_this_iteration,  
-    stress_metric,  
-): 
+def _evaluate_stress_threshold_criterion(
+    stress_criteria,
+    criterion,
+    sw,
+    t,
+    iteration,
+    dfenergy_r,
+    stressperiods_this_iteration,
+    stress_metric,
+):
     _stress_sorted_periods = stress_criteria['stress_sorted_periods']
     _failed = stress_criteria['failed']
     _high_stress_periods = stress_criteria['high_stress_periods']
     _shoulder_periods = stress_criteria['shoulder_periods']
-                                                                                                        
-    ## NEUE Example: criterion = 'transgrp_1_sum' 
+
+    ## NEUE Example: criterion = 'transgrp_1_sum'
     (hierarchy_level, stress_value, period_agg_method) = criterion.split('_')
 
     ### Get stored stress metric
@@ -521,23 +521,24 @@ def _evaluate_stress_threshold_criterion(
         _shoulder_periods = {
             **_shoulder_periods,
             **get_shoulder_periods(
-                                sw,
-                                criterion,
-                                dfenergy_r,
-                                _high_stress_periods,
-                                stress_metric=stress_metric_for_shoulder_periods)
+                sw,
+                criterion,
+                dfenergy_r,
+                _high_stress_periods,
+                stress_metric=stress_metric_for_shoulder_periods,
+            )
         }
 
         stress_criteria['stress_sorted_periods'] = _stress_sorted_periods
         stress_criteria['failed'] = _failed
         stress_criteria['high_stress_periods'] = _high_stress_periods
         stress_criteria['shoulder_periods'] = _shoulder_periods
-        
+
     else:
         print(f"GSw_PRM_StressThreshold = {criterion} passed")
 
     return stress_criteria
-    
+
 
 def get_stress_metrics_sorted_periods(sw, t, iteration):
     ### Get storage state of charge (SOC) to use in selection of "shoulder" stress periods
@@ -560,20 +561,31 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
     )
 
     ### Check all stress criteria; for regions that fail, add new stress periods
-    stress_criteria = {'stress_sorted_periods': {}, 'failed': {}, 'high_stress_periods': {}, 'shoulder_periods': {}}
+    stress_criteria = {
+        'stress_sorted_periods': {},
+        'failed': {},
+        'high_stress_periods': {},
+        'shoulder_periods': {},
+    }
 
     # Validation check: Display any GSw_PRM_StressThreshold{metric}
     # that is not specified in GSw_PRM_StressThresholdMetrics
     stress_metric_switches = sw.GSw_PRM_StressThresholdMetrics.split('/')
-    
+
     # stress periods column names for writing outputs
     stress_metric_units = {
-        'EUE':'MWh/year', 'NEUE':'ppm', 'LOLH':'event-h/year', 'LOLE':'event-day/year',
-        'OutageDuration':'h', 'OutageMagnitude':'MW', 'NormalizedOutageMagnitude':'p.u. of load',
+        'EUE':'MWh/year',
+        'NEUE':'ppm',
+        'LOLH':'event-h/year',
+        'LOLE':'event-day/year',
+        'OutageDuration':'h',
+        'OutageMagnitude':'MW',
+        'NormalizedOutageMagnitude':'p.u. of load',
     }
-    stress_metrics_col_names = {m:f'{m}_{stress_metric_units[m]}' for m in 
-                                stress_metric_switches}
-    
+    stress_metrics_col_names = {
+        m: f'{m}_{stress_metric_units[m]}' for m in stress_metric_switches
+    }
+
     for stress_metric in stress_metric_switches:
         for criterion in sw[f'GSw_PRM_StressThreshold{stress_metric}'].split('/'):
             print(f"Evaluating GSw_PRM_StressThreshold {stress_metric.upper()} with criterion: {criterion}")
@@ -587,7 +599,7 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
                 stressperiods_this_iteration,
                 stress_metric
             )
-            
+
     stress_sorted_periods = stress_criteria['stress_sorted_periods']
     failed = stress_criteria['failed']
     high_stress_periods = stress_criteria['high_stress_periods']
@@ -597,7 +609,7 @@ def get_stress_metrics_sorted_periods(sw, t, iteration):
 
     ### Get lists of stress periods: new (added this iteration) and all
     ##TODO: What if same high stress period is added for multiple criteria?
-    # Currently the duplicates are dropped. 
+    # Currently the duplicates are dropped.
     if len(failed):
         new_stress_periods = pd.concat(
             {**high_stress_periods, **shoulder_periods}, names=['criterion','periodtype'],
@@ -781,7 +793,6 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
         failed (dict): Dictionary of regions with unserved energy at the hierarchy_level
                        and their criterion evaluations
         combined_periods_write (pd.DataFrame): Data frame of combined stress periods
-    
 
     Returns:
         pd.DataFrame: Table of prm levels for the next PRAS iteration
@@ -807,7 +818,7 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
         pd.concat(_failed_regions)
         .sort_values(by=['stress_value'])
         .drop_duplicates(subset='r', keep='first')
-    )    
+    )
 
     ## Fixed-increment update
     if int(sw.GSw_PRM_UpdateMethod) == 1:
