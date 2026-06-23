@@ -6,6 +6,7 @@ import numpy as np
 from glob import glob
 import re
 import matplotlib.pyplot as plt
+from pathlib import Path
 from typing import Literal
 
 import reeds
@@ -19,11 +20,11 @@ from reeds.input_processing import hourly_writetimeseries
 
 
 #%%### Functions
-def get_pras_stress_metric(case, t, iteration=0, stress_metric:Literal['EUE','LOLE']='EUE'):  
+def get_pras_shortfall(case, t, iteration=0):
     """
+    Returns: dict of timeseries-indexed dataframes with two keys: 'EUE' and 'LOLE'
     """
     ### Get PRAS outputs
-
     dfpras = reeds.io.read_pras_results(
         os.path.join(case, 'handoff', 'PRAS', f"PRAS_{t}i{iteration}.h5")
     )
@@ -32,16 +33,22 @@ def get_pras_stress_metric(case, t, iteration=0, stress_metric:Literal['EUE','LO
     dfpras.index = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
 
     ### Keep the metric columns by zone
-    metric_tail = '_' + stress_metric.upper()
-    dfmetric = dfpras[[
-        c for c in dfpras
-        if (c.endswith(metric_tail) and not c.startswith('USA'))
-    ]].copy()
-    ## Drop the tailing metric tail
-    dfmetric = dfmetric.rename(
-        columns=dict(zip(dfmetric.columns, [c[:-len(metric_tail)] for c in dfmetric])))
+    dictout = {}
+    for metric in ['EUE', 'LOLE']:
+        metric_tail = '_' + metric.upper()
+        dfmetric = dfpras[[
+            c for c in dfpras
+            if (c.endswith(metric_tail) and not c.startswith('USA'))
+        ]].copy()
+        ## Drop the tailing metric tail
+        dictout[metric] = dfmetric.rename(
+            columns=dict(zip(
+                dfmetric.columns,
+                [c[:-len(metric_tail)] for c in dfmetric]
+            ))
+        )
 
-    return dfmetric
+    return dictout
 
 
 def get_stress_metric_periods(
@@ -76,14 +83,17 @@ def get_stress_metric_periods(
     # Use EUE metric for both EUE and NEUE calculations, since the load division to get NEUE is
     # peformed afterwards based on agg_period. 
     use_metric_for_pras = {
-        'EUE': 'EUE', 'NEUE': 'EUE', 'LOLH': 'LOLE', 'LOLE': 'LOLE',
-        'OutageDuration': 'EUE', 'OutageMagnitude': 'EUE', 'NormalizedOutageMagnitude': 'EUE',
+        'EUE': 'EUE',
+        'NEUE': 'EUE',
+        'LOLH': 'LOLE',
+        'LOLE': 'LOLE',
+        'OutageDuration': 'EUE',
+        'OutageMagnitude': 'EUE',
+        'NormalizedOutageMagnitude': 'EUE',
     }
-    dfmetric = get_pras_stress_metric(
-        case=case,
-        t=t,
-        iteration=iteration,
-        stress_metric=use_metric_for_pras.get(stress_metric)
+    dfmetric = (
+        get_pras_shortfall(case=case, t=t, iteration=iteration)
+        [use_metric_for_pras['stress_metric']]
     )
     ## Aggregate to hierarchy_level
     dfmetric = (
@@ -184,85 +194,157 @@ def get_and_write_neue(sw, write=True):
     return neue
 
 
-def get_annual_stress_metric(case, t, stress_metric, iteration=0):
-    """
-    """
-    ### Get values from PRAS
-    # Use EUE for outages duration calculation
-    use_metric_for_pras = {'EUE':'EUE',
-                           'NEUE':'EUE',
-                           'LOLH':'LOLE',
-                           'LOLE':'LOLE',
-                           'OutageDuration':'EUE',
-                           'OutageMagnitude':'EUE',
-                           'NormalizedOutageMagnitude':'EUE',
-                           }
-    dfmetric = get_pras_stress_metric(
-        case=case,
-        t=t,
-        iteration=iteration,
-        stress_metric=use_metric_for_pras[stress_metric],
+def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
+    """Return a dataframe of events with max and duration"""
+    starts = (
+        ## Convert values > threshold to 1
+        (ds > threshold).astype(int)
+        ## +1 if changes from 0->1, -1 if changes from 1->0
+        .diff()
+        ## If the first value is > threshold, count it as a start
+        .fillna((ds > threshold).astype(int))
+        ## Only keep the beginnings
+        > 0
     )
+    starts = starts.loc[starts > 0].index
+    ## Same idea for ends but reverse
+    ends = (
+        (ds > threshold).astype(int)
+        .diff(-1)
+        .fillna((ds > threshold).astype(int))
+        > 0
+    )
+    ends = ends.loc[ends > 0].index
+    assert len(starts) == len(ends), "Error in event start/end calculation"
+    ## Get some metrics for each event
+    dfout = []
+    for start, end in zip(starts, ends):
+        event = ds.loc[start:end]
+        dfout.append({
+            'start': start,
+            'end': end,
+            'timesteps': len(event),
+            'max': event.max(),
+            'sum': event.sum(),
+        })
+    return pd.DataFrame(dfout)
 
-    ### Get load (for calculating NEUE)
-    if stress_metric.upper() == 'NEUE' or stress_metric == 'NormalizedOutageMagnitude':
-        dfload = reeds.io.read_h5py_file(
-            os.path.join(
-                case,'handoff','reeds_data',f'pras_load_{t}.h5')
-        )
-        dfload.index = dfmetric.index
 
-    levels = ['country','interconnect','nercr','transreg','transgrp','st','r']
-    _metric = {}
+def calc_lold(dflole, rmap, threshold=0):
+    """Count a day as an event-day if at least one hour has LOLE > threshold"""
+    ## If multiple zones in one level and hour have LOLE, count that as one event,
+    ## so take the max LOLE across the zones
+    dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
+    ## Similarly, take the max for each day
+    ## (That's not quite right if the events are independent)
+    daily_max = dflole_agg.groupby(
+        [dflole_agg.index.year, dflole_agg.index.month, dflole_agg.index.day]
+    ).max()
+    ## Sum the probability across days
+    lold = daily_max.sum()
+    return lold
+
+
+def calc_lole(dflole, rmap, threshold=0):
+    """Number of events, where an event is >threshold LOLE in contiguous hours"""
+    ## If multiple zones in one level and hour have LOLE, count that as one event,
+    ## so take the max LOLE across the zones
+    dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
+    ## Get the loss-of-load events, keeping the max hourly probability for each
+    ## (not really right probabilistically)
+    lole = pd.Series({
+        r: get_events(dflole_agg[r], threshold)['max'].sum() for r in dflole_agg
+    })
+    return lole
+
+
+def calc_max_duration(dfeue, rmap, threshold=0):
+    """Max event duration, where an event is >threshold EUE [MW] in contiguous hours"""
+    dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
+    max_duration = pd.Series({
+        r: get_events(dfeue_agg[r], threshold)['timesteps'].max() for r in dfeue_agg
+    })
+    return max_duration
+
+
+def calc_neue(dfeue, dfload, rmap):
+    """NEUE (sum of EUE / sum of load) in units of ppm"""
+    dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
+    dfload_agg = dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
+    neue = dfeue_agg.sum() / dfload_agg.sum() * 1e6
+    return neue
+
+
+def calc_peak_eue(dfeue, dfload, rmap, norm:Literal['peak','hourly','absolute']='peak'):
+    """
+    Get the peak hourly outage magnitude
+
+    Args:
+        norm: How to normalize the hourly EUE [MW]
+            - 'peak': Divide hourly EUE by peak load -> returns fraction
+            - 'hourly': Divide hourly EUE by hourly load -> returns fraction
+            - 'absolute': Do not normalize -> returns MW
+    """
+    dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
+    dfload_agg = dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
+    match norm:
+        case 'peak':
+            peak_eue = dfeue_agg.max() / dfload_agg.max()
+        case 'hourly':
+            peak_eue = (dfeue_agg / dfload_agg).max()
+        case 'absolute':
+            peak_eue = dfeue.max()
+    return peak_eue
+
+
+def calc_ra_metrics(
+    case:str|Path,
+    t:int,
+    iteration:int=0,
+    levels=['country', 'interconnect', 'nercr', 'transreg', 'transgrp', 'st', 'r'],
+):
+    """
+    Calculate all resource adequacy metrics for the specified year/iteration
+    and regional aggregation levels.
+    """
+    ### Validate inputs
+    hierarchy = reeds.io.get_hierarchy(case).reset_index()
+    wrong = [i for i in levels if i not in hierarchy]
+    if len(wrong):
+        raise ValueError(f'Invalid levels: {wrong}')
+
+    ### Get values from PRAS
+    pras_shortfall = get_pras_shortfall(case, t, iteration)
+    dfeue = pras_shortfall['EUE']
+    dflole = pras_shortfall['LOLE']
+
+    ### Get load and number of years (for normalization)
+    dfload = reeds.io.read_h5py_file(
+        Path(case,'handoff','reeds_data',f'pras_load_{t}.h5')
+    )
+    dfload.index = dfeue.index
+    sw = reeds.io.get_switches(case)
+    numyears = len(sw.resource_adequacy_years_list)
+
+    ### Loop over aggregation levels and calculate all metrics
+    ra_metrics = {}
     for hierarchy_level in levels:
-        ### Get the region aggregator
+        print(f'Calculating RA metrics at {hierarchy_level} level')
+        ## Get the region aggregator
         rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
-
-        if stress_metric == 'LOLE':
-            # Count a day as an event-day if at least one hour has LOLE > 0
-            dfmetric_agg = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
-            daily_max = dfmetric_agg.groupby(
-                [dfmetric_agg.index.year, dfmetric_agg.index.month, dfmetric_agg.index.day]
-            ).max()
-            event_days = (daily_max > 0).sum()
-            _metric[hierarchy_level, 'sum'] = event_days
-            _metric[hierarchy_level, 'max'] = event_days
-            continue
-
-        if stress_metric in ['OutageDuration','OutageMagnitude','NormalizedOutageMagnitude']:
-            _metric[hierarchy_level, 'sum'] = get_sum_duration_outage(dfmetric)
-
-            ## TODO: for 'sum', OutageMagnitude returns the same value as `sum` for OutageDuration
-            if stress_metric == 'OutageMagnitude':
-                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric)
-            if stress_metric == 'NormalizedOutageMagnitude':
-                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric) / dfload.max()
-            if stress_metric == 'OutageDuration':
-                _metric[hierarchy_level, 'max'] = get_max_duration_outage(dfmetric)
-
-            continue
-
-        ### Get stress metric summed over year
-        _metric[hierarchy_level,'sum'] = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
-
-        ### Get max stress metric hour
-        _metric[hierarchy_level,'max'] = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum().max()
-
-        if stress_metric.upper() == 'NEUE':
-            _metric[hierarchy_level,'sum'] = (
-                dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
-                / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum().sum()
-            ) * 1e6
-            ### Get max NEUE hour
-            _metric[hierarchy_level,'max'] = (
-                dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
-                / dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
-            ).max() * 1e6
+        ## Calculate the full-timeseries metrics for each region
+        ra_metrics[hierarchy_level, 'lold_peryear'] = calc_lold(dflole, rmap) / numyears
+        ra_metrics[hierarchy_level, 'lole_peryear'] = calc_lole(dflole, rmap) / numyears
+        ra_metrics[hierarchy_level, 'max_duration'] = calc_max_duration(dfeue, rmap)
+        ra_metrics[hierarchy_level, 'neue_ppm'] = calc_neue(dfeue, dfload, rmap)
+        ra_metrics[hierarchy_level, 'euemax_peakloadfrac'] = calc_peak_eue(dfeue, dfload, rmap, 'peak')
+        ra_metrics[hierarchy_level, 'euemax_hourlyloadfrac'] = calc_peak_eue(dfeue, dfload, rmap, 'hourly')
+        ra_metrics[hierarchy_level, 'euemax_mw'] = calc_peak_eue(dfeue, dfload, rmap, 'absolute')
 
     ### Combine it
-    metric = pd.concat(_metric, names=['level','metric','region']).rename(f'{stress_metric}')
+    dfout = pd.concat(ra_metrics, names=['level','metric','region']).rename('value')
 
-    return metric
+    return dfout
 
 
 def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_metric):
@@ -755,91 +837,19 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
     return prm_next_iteration
 
 
-def get_max_duration_outage(dfmetric, eue_threshold = 0):
-    """Return the longest consecutive outage event in hours per region.
-
-    Check regions hourly EUE timeseries for runs of contiguous hours where
-    EUE exceeds ``eue_threshold``, and returns the length of the longest such run.
-    A single isolated hour counts as 1.
-
-    Args:
-        dfmetric (pd.DataFrame): Hourly EUE values (MW) indexed by timestamp, one
-            column per region. Typically obtained from :func:`get_pras_stress_metric`.
-        eue_threshold (float, optional): Minimum EUE (MW) to qualify as an outage
-            hour. Hours at or below this value are treated as no-outage. Defaults to
-            0 (any positive shortfall counts).
-
-    Returns:
-        pd.Series: Length in hours of the longest consecutive outage event, indexed
-            by region. Regions with no outage hours return 0.
-    """
-    def _max_run(series):
-        is_outage = series > eue_threshold
-        groups = (is_outage != is_outage.shift()).cumsum()[is_outage]
-        return series[is_outage].groupby(groups).size().max() if is_outage.any() else 0
-    return dfmetric.apply(_max_run)
-
-
-def get_sum_duration_outage(dfmetric, eue_threshold = 0):
-    """Return the total number of outage hours per region.
-
-    Counts every hour in the timeseries where EUE exceeds ``eue_threshold``
-    
-    Args:
-        dfmetric (pd.DataFrame): Hourly EUE values (MW) indexed by timestamp, one
-            column per region. Typically obtained from :func:`get_pras_stress_metric`.
-        eue_threshold (float, optional): Minimum EUE (MW) to qualify as an outage
-            hour. Hours at or below this value are excluded. Defaults to 0.
-
-    Returns:
-        pd.Series: Total outage hours over the full timeseries, indexed by region.
-            Regions with no outage hours return 0.
-    """
-    return (dfmetric > eue_threshold).sum()
-
-
-def get_max_magnitude_outage(dfmetric):
-    """Return the peak single-hour EUE per region (MW).
-
-    Finds the highest magnitude of shortfall for each region. Hours at or
-    below ``eue_threshold`` are masked before taking the maximum, so they cannot
-    inflate the result. Regions with no outage hours return 0.
-
-    Args:
-        dfmetric (pd.DataFrame): Hourly EUE values (MW) indexed by timestamp, one
-            column per region. Typically obtained from :func:`get_pras_stress_metric`.
-        eue_threshold (float, optional): Minimum EUE (MW) to qualify as an outage
-            hour. Hours at or below this value are excluded. Defaults to 0.
-
-    Returns:
-        pd.Series: Peak hourly EUE (MW) over the full timeseries, indexed by region.
-            Regions with no outage hours return 0.
-    """
-    return dfmetric.max()
-
-
 #%%### Procedure
 def main(sw, t, iteration=0, logging=True):
     """
     """
     #%% Write consolidated stress metrics so far
     try:
-        ## TODO: Check if get_and_write_neue() is still needed
+        ## TODO: Remove get_and_write_neue()
         _neue_simple = get_and_write_neue(sw, write=True)
-        ## TODO: check if need to refactor or remove
 
-        for stress_metric in ['EUE', 'NEUE', 'LOLH', 'LOLE', 'OutageDuration', 'OutageMagnitude', 'NormalizedOutageMagnitude']:
-            print(f"Calculating and writing annual {stress_metric} for iteration {iteration}")
-            dfmetric = get_annual_stress_metric(sw.casedir, t, stress_metric, iteration=iteration)
-
-            # Metric thresholds are defined on a per-year basis, but PRAS reports the total over all resource adequacy years,
-            # For all metrics except NEUE, divide by the number of resource adequacy years to get the average per year
-            if stress_metric != 'NEUE':
-                dfmetric /=  len(sw['resource_adequacy_years'])
-
-            dfmetric.round(2).to_csv(
-                os.path.join(sw.casedir, 'outputs', f"{stress_metric.lower()}_{t}i{iteration}.csv")
-            )
+        ra_metrics = calc_ra_metrics(case=sw.casedir, t=t, iteration=iteration)
+        ra_metrics.round(3).to_csv(
+            os.path.join(sw.casedir, 'outputs', f'ra_metrics_{t}i{iteration}.csv')
+        )
 
     except Exception as err:
         if int(sw['pras']) == 2:
