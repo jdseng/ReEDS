@@ -189,12 +189,9 @@ def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
     return pd.DataFrame(dfout)
 
 
-def calc_lold(dflole, rmap, threshold=0):
+def calc_lold(dflole_agg, threshold=0):
     """Count a day as an event-day if at least one hour has LOLE > threshold"""
-    ## If multiple zones in one level and hour have LOLE, count that as one event,
-    ## so take the max LOLE across the zones
-    dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
-    ## Similarly, take the max for each day
+    ## Take the max for each day
     ## (That's not quite right if the events are independent)
     daily_max = dflole_agg.groupby(
         [dflole_agg.index.year, dflole_agg.index.month, dflole_agg.index.day]
@@ -204,11 +201,8 @@ def calc_lold(dflole, rmap, threshold=0):
     return lold
 
 
-def calc_lole(dflole, rmap, threshold=0):
+def calc_lole(dflole_agg, threshold=0):
     """Number of events, where an event is >threshold LOLE in contiguous hours"""
-    ## If multiple zones in one level and hour have LOLE, count that as one event,
-    ## so take the max LOLE across the zones
-    dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
     ## Get the loss-of-load events, keeping the max hourly probability for each
     ## (not really right probabilistically)
     lole = pd.Series({
@@ -217,24 +211,21 @@ def calc_lole(dflole, rmap, threshold=0):
     return lole
 
 
-def calc_max_duration(dfeue, rmap, threshold=0):
+def calc_max_duration(dfeue_agg, threshold=0):
     """Max event duration, where an event is >threshold EUE [MW] in contiguous hours"""
-    dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
     max_duration = pd.Series({
         r: get_events(dfeue_agg[r], threshold)['timesteps'].max() for r in dfeue_agg
     })
     return max_duration
 
 
-def calc_neue(dfeue, dfload, rmap):
+def calc_neue(dfeue_agg, dfload_agg):
     """NEUE (sum of EUE / sum of load) in units of ppm"""
-    dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
-    dfload_agg = dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
     neue = dfeue_agg.sum() / dfload_agg.sum() * 1e6
     return neue
 
 
-def calc_peak_eue(dfeue, dfload, rmap, norm:Literal['peak','hourly','absolute']='peak'):
+def calc_peak_eue(dfeue_agg, dfload_agg, norm:Literal['peak','hourly','absolute']='peak'):
     """
     Get the peak hourly outage magnitude
 
@@ -244,15 +235,13 @@ def calc_peak_eue(dfeue, dfload, rmap, norm:Literal['peak','hourly','absolute']=
             - 'hourly': Divide hourly EUE by hourly load -> returns fraction
             - 'absolute': Do not normalize -> returns MW
     """
-    dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
-    dfload_agg = dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
     match norm:
         case 'peak':
             peak_eue = dfeue_agg.max() / dfload_agg.max()
         case 'hourly':
             peak_eue = (dfeue_agg / dfload_agg).max()
         case 'absolute':
-            peak_eue = dfeue.max()
+            peak_eue = dfeue_agg.max()
     return peak_eue
 
 
@@ -289,16 +278,21 @@ def calc_ra_metrics(
     ra_metrics = {}
     for hierarchy_level in levels:
         print(f'Calculating RA metrics at {hierarchy_level} level')
-        ## Get the region aggregator
+        ### Aggregate the shortfall and load to this hierarchy level
         rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
+        ## If multiple zones in one level and hour have LOLE, count that as one event,
+        ## so take the max LOLE across the zones
+        dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
+        dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
+        dfload_agg = dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
         ## Calculate the full-timeseries metrics for each region
-        ra_metrics[hierarchy_level, 'lold_peryear'] = calc_lold(dflole, rmap) / numyears
-        ra_metrics[hierarchy_level, 'lole_peryear'] = calc_lole(dflole, rmap) / numyears
-        ra_metrics[hierarchy_level, 'max_duration'] = calc_max_duration(dfeue, rmap)
-        ra_metrics[hierarchy_level, 'neue_ppm'] = calc_neue(dfeue, dfload, rmap)
-        ra_metrics[hierarchy_level, 'euemax_peakloadfrac'] = calc_peak_eue(dfeue, dfload, rmap, 'peak')
-        ra_metrics[hierarchy_level, 'euemax_hourlyloadfrac'] = calc_peak_eue(dfeue, dfload, rmap, 'hourly')
-        ra_metrics[hierarchy_level, 'euemax_mw'] = calc_peak_eue(dfeue, dfload, rmap, 'absolute')
+        ra_metrics[hierarchy_level, 'lold_peryear'] = calc_lold(dflole_agg) / numyears
+        ra_metrics[hierarchy_level, 'lole_peryear'] = calc_lole(dflole_agg) / numyears
+        ra_metrics[hierarchy_level, 'max_duration'] = calc_max_duration(dfeue_agg)
+        ra_metrics[hierarchy_level, 'neue_ppm'] = calc_neue(dfeue_agg, dfload_agg)
+        ra_metrics[hierarchy_level, 'euemax_peakloadfrac'] = calc_peak_eue(dfeue_agg, dfload_agg, 'peak')
+        ra_metrics[hierarchy_level, 'euemax_hourlyloadfrac'] = calc_peak_eue(dfeue_agg, dfload_agg, 'hourly')
+        ra_metrics[hierarchy_level, 'euemax_mw'] = calc_peak_eue(dfeue_agg, dfload_agg, 'absolute')
 
     ### Combine it
     dfout = pd.concat(ra_metrics, names=['level','metric','region']).rename('value')
