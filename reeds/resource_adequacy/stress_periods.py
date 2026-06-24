@@ -21,6 +21,14 @@ RA_SWITCHES = {
     i.lower(): f'GSw_PRM_StressThreshold{i}'
     for i in ['Depth', 'Duration', 'LOLD', 'LOLE', 'LOLH', 'NEUE']
 }
+SWITCH_METRIC = {
+    'depth': 'euemax_peakloadfrac',
+    'duration': 'max_duration',
+    'lold': 'lold_peryear',
+    'lole': 'lole_peryear',
+    'lolh': 'lolh_peryear',
+    'neue': 'neue_ppm',
+}
 
 
 #%%### Functions
@@ -53,83 +61,6 @@ def get_pras_shortfall(case, t, iteration=0):
         )
 
     return dictout
-
-
-def get_stress_metric_periods(
-        case, t, iteration=0,
-        hierarchy_level='transgrp',
-        stress_metric='EUE',
-        period_agg_method='sum',
-    ):
-    """_summary_
-
-    Args:
-        sw (pd.series): ReEDS switches for this run.
-        t (int): Model solve year.
-        iteration (int, optional): Iteration number of this solve year. Defaults to 0.
-        hierarchy_level (str, optional): column of hierarchy.csv specifying the spatial
-            level over which to calculate stress_metric. Defaults to 'country'.
-        stress_metric (str, optional): 'EUE' or 'NEUE'. Defaults to 'EUE'.
-        period_agg_method (str, optional): 'sum' or 'max', indicating how to aggregate
-            over the hours in each period. Defaults to 'sum'.
-
-    Raises:
-        NotImplementedError: if invalid value for stress_metric or GSw_PRM_StressModel
-
-    Returns:
-        pd.DataFrame: Table of periods sorted in descending order by stress metric.
-    """
-    sw = reeds.io.get_switches(case)
-    ### Get the region aggregator
-    rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
-
-    ### Get stress metric from PRAS
-    # Use EUE metric for both EUE and NEUE calculations, since the load division to get NEUE is
-    # peformed afterwards based on agg_period.
-    use_metric_for_pras = {
-        'EUE': 'EUE',
-        'NEUE': 'EUE',
-        'LOLH': 'LOLE',
-        'LOLE': 'LOLE',
-        'OutageDuration': 'EUE',
-        'OutageMagnitude': 'EUE',
-        'NormalizedOutageMagnitude': 'EUE',
-    }
-    dfmetric = (
-        get_pras_shortfall(case=case, t=t, iteration=iteration)
-        [use_metric_for_pras['stress_metric']]
-    )
-    ## Aggregate to hierarchy_level
-    dfmetric = (
-        dfmetric
-        .rename_axis('r', axis=1).rename_axis('h', axis=0)
-        .rename(columns=rmap).groupby(axis=1, level=0).sum()
-    )
-
-    ###### Calculate the stress metric by period
-    dfmetric_period = (
-        dfmetric
-        .groupby([dfmetric.index.year, dfmetric.index.month, dfmetric.index.day])
-        .agg(period_agg_method)
-        .rename_axis(['y','m','d'])
-    )
-
-    ### Sort and drop zeros and duplicates
-    dfmetric_top = (
-        dfmetric_period.stack('r')
-        .sort_values(ascending=False)
-        .replace(0,np.nan).dropna()
-        .reset_index().drop_duplicates(['y','m','d'], keep='first')
-        .set_index(['y','m','d','r']).squeeze(1).rename(stress_metric)
-        .reset_index('r')
-    )
-    ## Convert to timestamp, then to ReEDS period
-    dfmetric_top['actual_period'] = [
-        reeds.timeseries.timestamp2h(pd.Timestamp(*d), sw['GSw_HourlyType']).split('h')[0]
-        for d in dfmetric_top.index.values
-    ]
-
-    return dfmetric_top
 
 
 def plot_stress_diagnostics(sw, t, iteration, high_stress_periods):
@@ -204,9 +135,7 @@ def calc_lold(dflole_agg, threshold=0):
     """Count a day as an event-day if at least one hour has LOLE > threshold"""
     ## Take the max for each day
     ## (That's not quite right if the events are independent)
-    daily_max = dflole_agg.groupby(
-        [dflole_agg.index.year, dflole_agg.index.month, dflole_agg.index.day]
-    ).max()
+    daily_max = dflole_agg.resample('D').max()
     ## Sum the probability across days
     lold = daily_max.sum()
     return lold
@@ -220,6 +149,14 @@ def calc_lole(dflole_agg, threshold=0):
         r: get_events(dflole_agg[r], threshold)['max'].sum() for r in dflole_agg
     })
     return lole
+
+
+def calc_lolh(dflole_agg):
+    """Event-hours, where an event-hour is >threshold LOLE"""
+    ## Get the loss-of-load events, keeping the max hourly probability for each
+    ## (not really right probabilistically)
+    lolh = dflole_agg.sum()
+    return lolh
 
 
 def calc_max_duration(dfeue_agg, threshold=0):
@@ -299,6 +236,7 @@ def calc_ra_metrics(
         ## Calculate the full-timeseries metrics for each region
         ra_metrics[level, 'lold_peryear'] = calc_lold(dflole_agg) / numyears
         ra_metrics[level, 'lole_peryear'] = calc_lole(dflole_agg) / numyears
+        ra_metrics[level, 'lolh_peryear'] = calc_lolh(dflole_agg) / numyears
         ra_metrics[level, 'max_duration'] = calc_max_duration(dfeue_agg)
         ra_metrics[level, 'neue_ppm'] = calc_neue(dfeue_agg, dfload_agg)
         ra_metrics[level, 'euemax_peakloadfrac'] = calc_peak_eue(dfeue_agg, dfload_agg, 'peak')
@@ -330,7 +268,53 @@ def get_eue_events(
     return dfout
 
 
-def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_metric):
+def get_shortfall_periods(
+    dsmetric:pd.Series,
+    aggmethod:Literal['max','sum']='sum',
+    GSw_HourlyType:Literal['day','wek','year']='day',
+):
+    ## Keep days with nonzero metric
+    metric_day = dsmetric.resample('D').agg(aggmethod).replace(0, np.nan).dropna()
+    ## Convert to ReEDS period
+    metric_day.index = metric_day.index.map(
+        lambda x: reeds.timeseries.timestamp2h(x, GSw_HourlyType).split('h')[0]
+    )
+    ## Sort by value
+    metric_period = metric_day.groupby(metric_day.index).sum().sort_values(ascending=False)
+    return metric_period
+
+
+def get_longest_events(
+    sw,
+    t:int,
+    iteration:int,
+    hierarchy_level:str,
+    region:str,
+    num_events:int=1,
+):
+    ## Get the already-identified events
+    fpath = Path(sw.casedir, 'outputs', f'eue_events_{t}i{iteration}.csv')
+    eue_events = (
+        pd.read_csv(fpath, index_col=['level','region','number'])
+        .loc[hierarchy_level].loc[region]
+        .sort_values('timesteps', ascending=False)
+        .head(num_events)
+    )
+    ## Get the datetimes in each event and keep all unique
+    dates = []
+    for i, row in eue_events.iterrows():
+        dates.append(
+            pd.Series(index=pd.date_range(row.start, row.end, freq='H'), data=1)
+            .resample('D').count()
+        )
+    metric_period = pd.concat(dates)
+    metric_period.index = metric_period.index.map(
+        lambda x: reeds.timeseries.timestamp2h(x, sw.GSw_HourlyType).split('h')[0]
+    )
+    return metric_period.groupby(level=0).sum()
+
+
+def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods, stress_metric):
     ## Stop if not needed
     if sw.GSw_PRM_StressStorageCutoff.lower() in ['off', '0', 'false']:
         print(
@@ -338,7 +322,7 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
             "so not adding shoulder stress periods based on storage level"
         )
         return {}
-    if dfenergy_r.empty:
+    if dfenergy_agg.empty:
         print(
             "No storage capacity, so no shoulder stress periods will be added "
             "based on storage level"
@@ -346,34 +330,27 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
         return {}
 
     ## Parse inputs
-    hierarchy = reeds.io.get_hierarchy(sw.casedir)
     timeindex = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
     cutofftype, cutoff = sw.GSw_PRM_StressStorageCutoff.lower().split('_')
     periodhours = {'day':24, 'wek':24*5, 'year':24}[sw.GSw_HourlyType]
-    (hierarchy_level, stress_value, period_agg_method) = criterion.split('_')
 
-    ## Aggregate storage energy to hierarchy_level
-    dfenergy_agg = (
-        dfenergy_r.rename(columns=hierarchy[hierarchy_level])
-        .groupby(axis=1, level=0).sum()
-    )
     dfheadspace_MWh = dfenergy_agg.max() - dfenergy_agg
     dfheadspace_frac = dfheadspace_MWh / dfenergy_agg.max()
 
     shoulder_periods = {}
-    for i, row in high_eue_periods[criterion, f'high_{stress_metric}'].iterrows():
-        if row.r not in dfheadspace_MWh:
+    for i, row in high_stress_periods.iterrows():
+        if row.region not in dfheadspace_MWh:
             continue
 
-        day = pd.Timestamp('-'.join(row[['y','m','d']].astype(str).tolist()))
+        day = reeds.timeseries.h2timestamp(row.period)
 
-        start_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
-        end_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
+        start_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'), row.region].iloc[0]
+        end_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'), row.region].iloc[-1]
 
-        start_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[0]
-        end_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'),row.r].iloc[-1]
+        start_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'), row.region].iloc[0]
+        end_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'), row.region].iloc[-1]
 
-        day_eue = high_eue_periods[criterion, f'high_{stress_metric}'].loc[i, stress_metric]
+        day_eue = high_stress_periods.loc[i, stress_metric]
         day_index = np.where(
             timeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
         )[0][0]
@@ -388,7 +365,7 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
         ):
             shoulder_periods[criterion, f'after_{row.name}'] = pd.Series({
                 'actual_period':day_after.strftime('y%Yd%j'),
-                'y':day_after.year, 'm':day_after.month, 'd':day_after.day, 'r':row.r,
+                'region':row.region,
             }).to_frame().T.set_index('actual_period')
             print(f"Added {day_after} as shoulder stress period after {day}")
 
@@ -399,141 +376,134 @@ def get_shoulder_periods(sw, criterion, dfenergy_r, high_eue_periods, stress_met
         ):
             shoulder_periods[criterion, f'before_{row.name}'] = pd.Series({
                 'actual_period':day_before.strftime('y%Yd%j'),
-                'y':day_before.year, 'm':day_before.month, 'd':day_before.day, 'r':row.r,
+                'region':row.region,
             }).to_frame().T.set_index('actual_period')
             print(f"Added {day_before} as shoulder stress period before {day}")
 
     return shoulder_periods
 
 
-def _evaluate_stress_threshold_criterion(
-    stress_criteria,
-    criterion,
+def check_threshold_and_choose_periods(
+    stress_metric:str,
+    criterion:str,
     sw,
-    t,
-    iteration,
-    dfenergy_r,
+    t:int,
+    iteration:int,
+    dfeue_agg,
+    dflole_agg,
+    dfenergy_agg,
     stressperiods_this_iteration,
-    stress_metric,
 ):
-    _stress_sorted_periods = stress_criteria['stress_sorted_periods']
-    _failed = stress_criteria['failed']
-    _high_stress_periods = stress_criteria['high_stress_periods']
-    _shoulder_periods = stress_criteria['shoulder_periods']
-
-    ## NEUE Example: criterion = 'transgrp_1_sum'
-    (hierarchy_level, stress_value, period_agg_method) = criterion.split('_')
+    ## NEUE Example: criterion = 'transgrp_1'
+    hierarchy_level, metric_threshold = criterion.split('_')
+    metric_threshold = float(metric_threshold)
+    GSw_HourlyType = sw.GSw_HourlyType
 
     ### Get stored stress metric
-    stress_vals = pd.read_csv(
-        os.path.join(sw.casedir, 'outputs', f'{stress_metric.lower()}_{t}i{iteration}.csv'),
+    ra_metrics = pd.read_csv(
+        os.path.join(sw.casedir, 'outputs', f'ra_metrics_{t}i{iteration}.csv'),
         index_col=['level', 'metric', 'region'],
     ).squeeze(1)
 
-    stress_periods = get_stress_metric_periods(
-        case=sw.casedir, t=t, iteration=iteration,
-        hierarchy_level=hierarchy_level,
-        stress_metric=stress_metric,
-        period_agg_method=period_agg_method,
-    )
-
-    ### Sort in descending stress_metric order
-    _stress_sorted_periods[criterion] = (
-        stress_periods
-        .sort_values(stress_metric, ascending=False)
-        .reset_index().set_index('actual_period')
-    )
-
     ### Get the threshold(s) and see if any of them failed
-    this_test = stress_vals[hierarchy_level][period_agg_method]
-
-    if (this_test > float(stress_value)).any():
-        _failed[criterion] = this_test.loc[this_test > float(stress_value)]
-        print(f"GSw_PRM_StressThreshold = {criterion} failed for:")
-        print(_failed[criterion])
-        ###### Add GSw_PRM_StressIncrement periods to the list for the next iteration
-        _high_stress_periods[criterion, f'high_{stress_metric}'] = (
-            _stress_sorted_periods[criterion].loc[
-                ## Only include new stress periods for the region(s) that failed
-                _stress_sorted_periods[criterion].r.isin(_failed[criterion].index)
-                ## Don't repeat existing stress periods
-                & ~(_stress_sorted_periods[criterion].index.isin(
-                    stressperiods_this_iteration.actual_period))
-            ]
-            ## Don't add dates more than once
-            .drop_duplicates(subset=['y','m','d'])
-            ## Keep the GSw_PRM_StressIncrement worst periods for each region.
-            ## If you instead want to keep the GSw_PRM_StressIncrement worst periods
-            ## overall, use .nlargest(int(sw.GSw_PRM_StressIncrement), stress_metric)
-            .groupby('r').head(int(sw.GSw_PRM_StressIncrement))
+    this_test = ra_metrics[hierarchy_level][SWITCH_METRIC[stress_metric]]
+    failed = this_test.loc[this_test > metric_threshold]
+    if not len(failed):
+        print(f"{RA_SWITCHES[stress_metric]} = {criterion} passed")
+    else:
+        print(f"{RA_SWITCHES[stress_metric]} = {criterion} failed for:")
+        print(failed)
+        match stress_metric:
+            case 'depth':
+                metric_periods = {
+                    region: (
+                        get_shortfall_periods(dfeue_agg[region], 'max', GSw_HourlyType)
+                        .head(int(sw.GSw_PRM_StressIncrement))
+                    )
+                    for region in failed.index
+                }
+            case 'duration':
+                ## TODO: Keep whole events (including when they span days)
+                metric_periods = {
+                    region: get_longest_events(
+                        sw=sw, t=t, iteration=iteration,
+                        hierarchy_level=hierarchy_level, region=region,
+                    )
+                    for region in failed.index
+                }
+            case 'lold' | 'lole':
+                ## TODO: Double check this approach for LOLD and LOLE
+                metric_periods = {
+                    region: (
+                        get_shortfall_periods(dflole_agg[region], 'max', GSw_HourlyType)
+                        .head(int(sw.GSw_PRM_StressIncrement))
+                    )
+                    for region in failed.index
+                }
+            case 'lolh':
+                metric_periods = {
+                    region: (
+                        get_shortfall_periods(dflole_agg[region], 'sum', GSw_HourlyType)
+                        .head(int(sw.GSw_PRM_StressIncrement))
+                    )
+                    for region in failed.index
+                }
+            case 'neue':
+                metric_periods = {
+                    region: (
+                        get_shortfall_periods(dfeue_agg[region], 'sum', GSw_HourlyType)
+                        .head(int(sw.GSw_PRM_StressIncrement))
+                    )
+                    for region in failed.index
+                }
+        high_stress_periods = (
+            pd.concat(metric_periods, names=['region','period'])
+            .rename(stress_metric)
+            .reset_index()
         )
-        for period, row in _high_stress_periods[criterion, f'high_{stress_metric}'].iterrows():
+        for i, row in high_stress_periods.iterrows():
             print(
-                f"Added {period} "
-                f"({reeds.timeseries.h2timestamp(period).strftime('%Y-%m-%d')}) "
-                f"as stress period for {row.r} "
+                f"Added {row.period} "
+                f"({reeds.timeseries.h2timestamp(row.period).strftime('%Y-%m-%d')}) "
+                f"as stress period for {row.region} "
                 f"({stress_metric} = {row[stress_metric]})"
             )
 
         ### Include "shoulder periods" before or after each period
         ### if the storage state of charge is low
-        # Maintain EUE to be used for determining shoulder periods
-        stress_metric_for_shoulder_periods = 'EUE'
-        eue_periods = get_stress_metric_periods(
-            case=sw.casedir, t=t, iteration=iteration,
-            hierarchy_level=hierarchy_level,
-            stress_metric=stress_metric_for_shoulder_periods,
-            period_agg_method=period_agg_method,
-        )
-
-        _eue_sorted = (
-            eue_periods
-            .sort_values(stress_metric_for_shoulder_periods, ascending=False)
-            .reset_index().set_index('actual_period')
-        )
-
-        _high_stress_periods[criterion, f'high_{stress_metric_for_shoulder_periods}'] = (
-            _eue_sorted.loc[
-                _eue_sorted.r.isin(_failed[criterion].index)
-                & ~(_eue_sorted.index.isin(stressperiods_this_iteration.actual_period))
-            ]
-            .drop_duplicates(subset=['y','m','d'])
-            .groupby('r').head(int(sw.GSw_PRM_StressIncrement))
-        )
-
-        _shoulder_periods = {
-            **_shoulder_periods,
-            **get_shoulder_periods(
+        if stress_metric.lower() == 'neue':
+            shoulder_periods = get_shoulder_periods(
                 sw,
                 criterion,
-                dfenergy_r,
-                _high_stress_periods,
-                stress_metric=stress_metric_for_shoulder_periods,
+                dfenergy_agg,
+                high_stress_periods,
+                stress_metric=stress_metric,
             )
+        else:
+            shoulder_periods = {}
+
+        return {
+            'failed': failed,
+            'high_stress_periods': high_stress_periods,
+            'shoulder_periods': shoulder_periods,
         }
 
-        stress_criteria['stress_sorted_periods'] = _stress_sorted_periods
-        stress_criteria['failed'] = _failed
-        stress_criteria['high_stress_periods'] = _high_stress_periods
-        stress_criteria['shoulder_periods'] = _shoulder_periods
 
-    else:
-        print(f"GSw_PRM_StressThreshold = {criterion} passed")
-
-    return stress_criteria
-
-
-def get_stress_periods(sw, t, iteration):
-    ### Get storage state of charge (SOC) to use in selection of "shoulder" stress periods
-    dfenergy = reeds.io.read_pras_results(
+def get_stress_periods(case, sw, t, iteration):
+    ### Get values from PRAS
+    pras_shortfall = get_pras_shortfall(case, t, iteration)
+    dfeue = pras_shortfall['EUE']
+    dflole = pras_shortfall['LOLE']
+    ## Storage state of charge (SOC) to use in selection of "shoulder" stress periods
+    dfenergy_unit = reeds.io.read_pras_results(
         os.path.join(sw['casedir'], 'handoff', 'PRAS', f"PRAS_{t}i{iteration}-energy.h5")
     )
     timeindex = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
-    dfenergy.index = timeindex
-    ## Sum by region
-    dfenergy_r = (
-        dfenergy
-        .rename(columns={c: c.split('|')[1] for c in dfenergy.columns})
+    dfenergy_unit.index = timeindex
+    ## Sum over units
+    dfenergy = (
+        dfenergy_unit
+        .rename(columns={c: c.split('|')[1] for c in dfenergy_unit.columns})
         .groupby(axis=1, level=0).sum()
     )
 
@@ -544,50 +514,37 @@ def get_stress_periods(sw, t, iteration):
     )
 
     ### Check all stress criteria; for regions that fail, add new stress periods
-    stress_criteria = {
-        'stress_sorted_periods': {},
-        'failed': {},
-        'high_stress_periods': {},
-        'shoulder_periods': {},
-    }
+    failed = {}
+    high_stress_periods = {}
+    shoulder_periods = {}
 
-    # Validation check: Display any GSw_PRM_StressThreshold{metric}
-    # that is not specified in GSw_PRM_StressThresholdMetrics
-    stress_metric_switches = sw.GSw_PRM_StressThresholdMetrics.split('/')
-
-    # stress periods column names for writing outputs
-    stress_metric_units = {
-        'NEUE': 'ppm',
-        'LOLD': 'event-days/year',
-        'LOLH': 'event-hours/year',
-        'LOLE': 'events/year',
-        'Duration': 'hours',
-        'Depth': 'fraction',
-    }
-    stress_metrics_col_names = {
-        m: f'{m}_{stress_metric_units[m]}' for m in stress_metric_switches
-    }
-
-    for stress_metric in stress_metric_switches:
-        for criterion in sw[f'GSw_PRM_StressThreshold{stress_metric}'].split('/'):
-            print(f"Evaluating GSw_PRM_StressThreshold {stress_metric.upper()} with criterion: {criterion}")
-            stress_criteria = _evaluate_stress_threshold_criterion(
-                stress_criteria,
+    stress_metrics = [i.lower() for i in sw.GSw_PRM_StressThresholdMetrics.split('/')]
+    for stress_metric in stress_metrics:
+        switch = RA_SWITCHES[stress_metric]
+        for criterion in sw[switch].split('/'):
+            ### Aggregate the shortfall and load to this hierarchy level
+            ## Example: criterion = 'transgrp_1'
+            hierarchy_level, metric_threshold = criterion.split('_')
+            rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
+            dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
+            dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
+            dfenergy_agg = dfenergy.rename(columns=rmap).groupby(axis=1, level=0).sum()
+            ## Get the stress periods
+            dictout = check_threshold_and_choose_periods(
+                stress_metric,
                 criterion,
                 sw,
                 t,
                 iteration,
-                dfenergy_r,
+                dfeue_agg,
+                dflole_agg,
+                dfenergy_agg,
                 stressperiods_this_iteration,
-                stress_metric
             )
-
-    stress_sorted_periods = stress_criteria['stress_sorted_periods']
-    failed = stress_criteria['failed']
-    high_stress_periods = stress_criteria['high_stress_periods']
-    shoulder_periods = stress_criteria['shoulder_periods']
-
-    stress_sorted_periods = pd.concat(stress_sorted_periods, names=['criterion'])
+            if dictout is not None:
+                failed.update(dictout['failed'])
+                high_stress_periods.update(dictout['high_stress_periods'])
+                shoulder_periods.update(dictout['shoulder_periods'])
 
     ### Get lists of stress periods: new (added this iteration) and all
     if len(failed):
@@ -635,9 +592,6 @@ def get_stress_periods(sw, t, iteration):
         'Duration': 'duration_hours',
         'Depth': 'depth_fraction',
     }
-    stress_sorted_periods.round(2).rename(columns=stress_metric_labels).to_csv(
-        os.path.join(sw.casedir, 'inputs_case', newstresspath, 'stress_metrics_sorted_periods.csv')
-    )
     new_stress_periods.round(2).rename(columns=stress_metric_labels).to_csv(
         os.path.join(sw.casedir, 'inputs_case', newstresspath, 'new_stress_periods.csv'),
         index=False,
@@ -791,20 +745,20 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
     for criterion in failed:
         if not failed[criterion].name == 'NEUE':
             continue
-        # Example: criterion = 'transgrp_10_sum'
-        (hierarchy_level, stress_value, __) = criterion.split('_')
+        # Example: criterion = 'transgrp_10'
+        hierarchy_level, metric_threshold = criterion.split('_')
         # Recover regions where the PRM criterion failed
         rmap = reeds.io.get_rmap(sw['casedir'], hierarchy_level=hierarchy_level).reset_index()
         df = rmap.loc[
             rmap[hierarchy_level].isin(failed[criterion].index)
         ].rename(columns={hierarchy_level:'region'})
         df['hierarchy_level'] = hierarchy_level
-        df['stress_value'] = float(stress_value)
+        df['metric_threshold'] = float(metric_threshold)
         _failed_regions.append(df)
     # For zones that failed multiple criteria, use the most stringent (lowest EUE target)
     failed_regions = (
         pd.concat(_failed_regions)
-        .sort_values(by=['stress_value'])
+        .sort_values(by=['metric_threshold'])
         .drop_duplicates(subset='r', keep='first')
     )
 
@@ -840,7 +794,7 @@ def update_prm(sw, t, iteration, failed, combined_periods_write):
 def main(sw, t, iteration=0, logging=True):
     """
     """
-    #%% Write consolidated stress metrics so far
+    #%% Write consolidated stress metrics
     ra_metrics = calc_ra_metrics(case=sw.casedir, t=t, iteration=iteration)
     ra_metrics.round(3).to_csv(
         os.path.join(sw.casedir, 'outputs', f'ra_metrics_{t}i{iteration}.csv')
@@ -858,7 +812,7 @@ def main(sw, t, iteration=0, logging=True):
 
     #%% Identify and write new stress periods
     failed, new_stressperiods_write, combined_periods_write = get_stress_periods(
-        sw=sw, t=t, iteration=iteration,
+        case=sw.casedir, sw=sw, t=t, iteration=iteration,
     )
 
     #%% Stop here if all thresholds pass or if there are no new stress periods
