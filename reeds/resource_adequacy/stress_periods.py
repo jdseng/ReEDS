@@ -16,6 +16,13 @@ from reeds.input_processing import hourly_writetimeseries
 # importlib.reload(functions)
 
 
+#%%### Constants
+RA_SWITCHES = {
+    i.lower(): f'GSw_PRM_StressThreshold{i}'
+    for i in ['Depth', 'Duration', 'LOLD', 'LOLE', 'LOLH', 'NEUE']
+}
+
+
 #%%### Functions
 def get_pras_shortfall(case, t, iteration=0):
     """
@@ -176,17 +183,21 @@ def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
     ends = ends.loc[ends > 0].index
     assert len(starts) == len(ends), "Error in event start/end calculation"
     ## Get some metrics for each event
-    dfout = []
+    events = []
     for start, end in zip(starts, ends):
         event = ds.loc[start:end]
-        dfout.append({
+        events.append({
             'start': start,
             'end': end,
             'timesteps': len(event),
             'max': event.max(),
             'sum': event.sum(),
         })
-    return pd.DataFrame(dfout)
+    if len(events):
+        dfout = pd.DataFrame(events)
+    else:
+        dfout = pd.DataFrame(columns=['start','end','timesteps','max','sum'])
+    return dfout
 
 
 def calc_lold(dflole_agg, threshold=0):
@@ -215,7 +226,7 @@ def calc_max_duration(dfeue_agg, threshold=0):
     """Max event duration, where an event is >threshold EUE [MW] in contiguous hours"""
     max_duration = pd.Series({
         r: get_events(dfeue_agg[r], threshold)['timesteps'].max() for r in dfeue_agg
-    })
+    }).fillna(0).astype(int)
     return max_duration
 
 
@@ -616,10 +627,18 @@ def get_stress_periods(sw, t, iteration):
         combined_periods_write.to_csv(outpath, index=False)
 
     ### Tables and plots for debugging
-    stress_sorted_periods.round(2).rename(columns=stress_metrics_col_names).to_csv(
+    stress_metric_labels = {
+        'NEUE': 'neue_ppm',
+        'LOLD': 'lold_event-days/year',
+        'LOLH': 'lolh_event-hours/year',
+        'LOLE': 'lole_events/year',
+        'Duration': 'duration_hours',
+        'Depth': 'depth_fraction',
+    }
+    stress_sorted_periods.round(2).rename(columns=stress_metric_labels).to_csv(
         os.path.join(sw.casedir, 'inputs_case', newstresspath, 'stress_metrics_sorted_periods.csv')
     )
-    new_stress_periods.round(2).rename(columns=stress_metrics_col_names).to_csv(
+    new_stress_periods.round(2).rename(columns=stress_metric_labels).to_csv(
         os.path.join(sw.casedir, 'inputs_case', newstresspath, 'new_stress_periods.csv'),
         index=False,
     )
@@ -877,12 +896,9 @@ def main(sw, t, iteration=0, logging=True):
         os.path.join(sw.casedir, 'inputs_case', newstresspath, 'prm.csv'),
     )
 
-    #%% Done
-    return
 
-
+# #%%### Option to run script directly for debugging
 # if __name__ == '__main__':
-#     #%%###  option to run script directly for debugging
 #     casedir =  "/path/to/ReEDS/runs/runname"
 #     t = 2030 # previous solve year
 #     iteration = 0
