@@ -1,9 +1,7 @@
 #%%### General imports
 import os
-import traceback
-import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+import pandas as pd
 from pathlib import Path
 from typing import Literal
 
@@ -62,34 +60,6 @@ def get_pras_shortfall(case, t, iteration=0):
         )
 
     return dictout
-
-
-def plot_stress_diagnostics(sw, t, iteration, new_stressperiods_write):
-    try:
-        dates = (
-            new_stressperiods_write
-            .reset_index().actual_period.map(reeds.timeseries.h2timestamp)
-            .dt.strftime('%Y-%m-%d')
-            .tolist()
-        )
-        vmax = {'forced': 40, 'scheduled': 25, 'both': 50}
-        aggfunc = 'max'
-        for outage_type in vmax:
-            savename = f'map-outage_{outage_type}_{aggfunc}-{t}i{iteration}.png'
-            plt.close()
-            f, ax, _ = reeds.reedsplots.map_outage_days(
-                sw.casedir,
-                dates=dates,
-                outage_type=outage_type,
-                aggfunc=aggfunc,
-                vmax=vmax[outage_type],
-            )
-            plt.savefig(
-                os.path.join(sw.casedir, 'outputs', 'figures', 'resource_adequacy', savename)
-            )
-            plt.close()
-    except Exception:
-        print(traceback.format_exc())
 
 
 def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
@@ -602,12 +572,11 @@ def get_stress_periods(case, sw, t, iteration):
     else:
         combined_periods_write.to_csv(outpath, index=False)
 
-    ### Tables and plots for debugging
+    ### Tables for debugging
     new_stress_periods.to_csv(
         os.path.join(sw.casedir, 'inputs_case', newstresspath, 'new_stress_periods.csv'),
         index=False,
     )
-    plot_stress_diagnostics(sw, t, iteration, new_stressperiods_write)
 
     return failed, new_stressperiods_write, combined_periods_write
 
