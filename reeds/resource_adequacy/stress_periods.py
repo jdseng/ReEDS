@@ -526,12 +526,11 @@ def get_stress_periods(case, sw, t, iteration):
                 _high_stress_periods[stress_metric, criterion] = dictout['high_stress_periods']
                 _shoulder_periods[stress_metric, criterion] = dictout['shoulder_periods']
 
-    failed = pd.concat(_failed)
-    high_stress_periods = pd.concat(_high_stress_periods)
-    shoulder_periods = pd.concat(_shoulder_periods)
-
     ### Get lists of stress periods: new (added this iteration) and all
-    if len(failed):
+    if len(_failed):
+        failed = pd.concat(_failed)
+        high_stress_periods = pd.concat(_high_stress_periods)
+        shoulder_periods = pd.concat(_shoulder_periods)
         new_stress_periods = pd.concat(
             {'stress':high_stress_periods, 'shoulder':shoulder_periods},
             names=['periodtype','metric','criterion','num'],
@@ -540,7 +539,7 @@ def get_stress_periods(case, sw, t, iteration):
         print(new_stress_periods)
         new_stress_periods = new_stress_periods.drop_duplicates('period')
     else:
-        return failed, None, None
+        return {}, {}, {}
 
     ## Reproduce the format of inputs_case/stress_period_szn.csv
     p = 'w' if sw.GSw_HourlyType == 'wek' else 'd'
