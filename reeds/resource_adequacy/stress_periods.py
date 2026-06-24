@@ -358,11 +358,13 @@ def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods):
                 f"Added {day_before.strftime(fmt)} as shoulder stress period "
                 f"before {day.strftime(fmt)}"
             )
-
-    shoulder_periods = (
-        pd.concat(_shoulder_periods).unstack(level=1).reset_index()
-        .rename(columns={'index':'value'})[['region','period','value']]
-    )
+    if len(_shoulder_periods):
+        shoulder_periods = (
+            pd.concat(_shoulder_periods).unstack(level=1).reset_index()
+            .rename(columns={'index':'value'})[['region','period','value']]
+        )
+    else:
+        shoulder_periods = pd.DataFrame(columns=['region','period','value'])
     return shoulder_periods
 
 
@@ -397,7 +399,7 @@ def check_threshold_and_choose_periods(
             print(f'{i}: {val} {stress_metric}')
     else:
         print(f"{RA_SWITCHES[stress_metric]} = {criterion} failed for:")
-        for i, val in this_test.items():
+        for i, val in failed.items():
             print(f'{i}: {val} {stress_metric}')
         ## Get new stress periods since the metric failed
         match stress_metric:
