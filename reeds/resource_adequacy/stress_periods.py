@@ -230,15 +230,16 @@ def get_annual_stress_metric(case, t, stress_metric, iteration=0):
             continue
 
         if stress_metric in ['OutageDuration','OutageMagnitude','NormalizedOutageMagnitude']:
-            _metric[hierarchy_level, 'sum'] = get_sum_duration_outage(dfmetric)
+            dfmetric_agg = dfmetric.rename(columns=rmap).groupby(axis=1, level=0).sum()
+            _metric[hierarchy_level, 'sum'] = get_sum_duration_outage(dfmetric_agg)
 
-            ## TODO: for 'sum', OutageMagnitude returns the same value as `sum` for OutageDuration
             if stress_metric == 'OutageMagnitude':
-                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric)
+                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric_agg)
             if stress_metric == 'NormalizedOutageMagnitude':
-                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric) / dfload.max()
+                dfload_agg = dfload.rename(columns=rmap).groupby(axis=1, level=0).sum()
+                _metric[hierarchy_level, 'max'] = get_max_magnitude_outage(dfmetric_agg) / dfload_agg.max()
             if stress_metric == 'OutageDuration':
-                _metric[hierarchy_level, 'max'] = get_max_duration_outage(dfmetric)
+                _metric[hierarchy_level, 'max'] = get_max_duration_outage(dfmetric_agg)
 
             continue
 
@@ -878,6 +879,7 @@ def main(sw, t, iteration=0, logging=True):
     if (
         (int(sw.GSw_PRM_UpdateMethod) == 0)
         or (len(new_stressperiods_write) and (int(sw.GSw_PRM_UpdateMethod) == 3))
+        or not any(failed[c].name == 'NEUE' for c in failed)
     ):
         ## Not updating PRM, so copy last year's
         prm_next_iteration = pd.read_csv(
