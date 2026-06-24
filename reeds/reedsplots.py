@@ -4121,22 +4121,19 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
 
 
 def plot_stressperiod_evolution(
-        case, level=None, metric=None, threshold=None,
+        case, level=None, threshold=None,
         figsize=None, scale_widths=False,
     ):
     """Plot NEUE by year and stress period iteration"""
     ### Parse inputs
     sw = reeds.io.get_switches(case)
-    _first_metric = sw['GSw_PRM_StressThresholdMetrics'].split('/')[0].upper()
-    _parts = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')
-    _level, _threshold, _metric = _parts[0], _parts[1], _parts[2]
+    _level, _threshold = sw['GSw_PRM_StressThresholdNEUE'].split('/')[0].split('_')
     level = _level if level is None else level
     threshold = float(_threshold) if threshold is None else threshold
-    metric = _metric if metric is None else metric
     ### Load NEUE results
-    infiles = sorted(glob(os.path.join(case,'outputs','neue_*.csv')))
+    infiles = sorted(glob(os.path.join(case,'outputs','ra_metrics_*.csv')))
     dictin_neue = {
-        tuple([int(x) for x in os.path.basename(f)[len('neue_'):-len('.csv')].split('i')]):
+        tuple([int(x) for x in os.path.basename(f)[len('ra_metrics_'):-len('.csv')].split('i')]):
         pd.read_csv(f, index_col=['level','metric','region'])
         for f in infiles
     }
@@ -4144,8 +4141,8 @@ def plot_stressperiod_evolution(
     dfplot = (
         pd.concat(dictin_neue, names=['year','iteration'])
         .xs(level,0,'level')
-        .xs(metric,0,'metric')
-        .NEUE.unstack('region')
+        .xs('neue_ppm',0,'metric')
+        .squeeze(1).unstack('region')
     )
     ### Load stress periods for labels
     dfstress = get_stressperiods(case)
@@ -4206,18 +4203,26 @@ def plot_stressperiod_evolution(
     return f,ax
 
 
-def plot_neue_bylevel(
-        case, tmin=2023,
-        levels=['country','interconnect','transreg','transgrp'],
-        metrics=['sum','max'],
-        onlydata=False,
-    ):
+def plot_ra_metrics_bylevel(
+    case, tmin=2023,
+    levels=['country','interconnect','transreg','transgrp'],
+    metrics=[
+        'neue',
+        'lolh',
+        'lole',
+        'lold',
+        'duration',
+        'depth',
+    ],
+    onlydata=False,
+):
     """Plot regional NEUE over time"""
+    from reeds.resource_adequacy import stress_periods
     ### Get final iterations
     year2iteration = (
         pd.DataFrame([
-            os.path.basename(i).strip('neue_.csv').split('i')
-            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
+            os.path.basename(i).strip('ra_metrics.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'ra_metrics_*.csv')))
         ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration
@@ -4226,58 +4231,70 @@ def plot_neue_bylevel(
     ### Get NEUE
     sw = reeds.io.get_switches(case)
     sw['casedir'] = case
-    dictin_neue = {}
+    ra_metrics = {}
     for t, iteration in year2iteration.items():
         try:
-            dictin_neue[t] = (
-                reeds.io.read_output(case, f'neue_{t}i{iteration}.csv')
+            ra_metrics[t] = (
+                reeds.io.read_output(case, f'ra_metrics_{t}i{iteration}.csv')
                 .set_index(['level','metric','region']).squeeze(1)
             )
         except FileNotFoundError:
-            dictin_neue[t] = (
-                reeds.io.read_output(case, f'neue_{t}i{iteration-1}.csv')
+            ra_metrics[t] = (
+                reeds.io.read_output(case, f'ra_metrics_{t}i{iteration-1}.csv')
                 .set_index(['level','metric','region']).squeeze(1)
             )
-    dfin_neue = pd.concat(dictin_neue, axis=0, names=['year']).unstack('year')
-    dfin_neue = dfin_neue[[c for c in dfin_neue if int(c) >= 2025]].copy()
+    dfin_ra = pd.concat(ra_metrics, axis=0, names=['year']).unstack('year')
+    dfin_ra = dfin_ra[[c for c in dfin_ra if int(c) >= 2025]].copy()
     if onlydata:
-        return dfin_neue
+        return dfin_ra
     ### Plot settings
     ncols = len(levels)
     nrows = len(metrics)
     colors = {
         level: plots.rainbowmapper(
-            dfin_neue.xs(level,0,'level').reset_index().region.unique())
+            dfin_ra.xs(level,0,'level').reset_index().region.unique())
         for level in levels
     }
-    norm = {'sum':1, 'max':1e-4}
-    ylabel = {'sum': 'Sum of NEUE [ppm]', 'max':'Max NEUE [%]'}
-    thresholds = {
-        sw[f'GSw_PRM_StressThreshold{m.upper()}'].split('_')[0]:
-        float(sw[f'GSw_PRM_StressThreshold{m.upper()}'].split('_')[1])
-        for m in sw.GSw_PRM_StressThresholdMetrics.split('/')
+    ylabel = {
+        'neue': 'NEUE\n[ppm]',
+        'lolh': 'LOLH\n[event-hours/year]',
+        'lole': 'LOLE\n[events/year]',
+        'lold': 'LOLD\n[event-days/year]',
+        'duration': 'Duration\n[hours]',
+        'depth': 'Depth\n[% of peak]',
     }
+    scale = {'depth':100}
     ### Plot it
     plt.close()
     f,ax = plt.subplots(
-        nrows, ncols, figsize=(2*ncols, 3*nrows),
+        nrows, ncols, figsize=(2*ncols, 1.5*nrows),
         sharex=True, sharey='row',
     )
     for row, metric in enumerate(metrics):
+        switch = stress_periods.RA_SWITCHES[metric.lower()]
+        switch_metric = stress_periods.SWITCH_METRIC[metric.lower()]
+        thresholds = {
+            i.split('_')[0]: float(i.split('_')[1])
+            for i in sw[switch].split('/')
+        }
         for col, level in enumerate(levels):
             for region, c in colors[level].items():
                 ax[row,col].plot(
-                    dfin_neue.columns,
-                    dfin_neue.loc[(level,metric,region)].values * norm[metric],
+                    dfin_ra.columns,
+                    dfin_ra.loc[(level,switch_metric,region)].values * scale.get(metric,1),
                     c=c, label=region, marker='o', markersize=2,
                 )
+            if (
+                (level in thresholds)
+                and (metric in sw.GSw_PRM_StressThresholdMetrics.lower().split('/'))
+                and (not int(sw.GSw_PRM_CapCredit))
+            ):
+                ax[row,col].axhline(thresholds[level] * scale.get(metric,1), c='k', ls=':', lw=0.75)
         ## Formatting
-        ax[row,0].set_ylabel(ylabel[metric])
+        ax[row,0].set_ylabel(ylabel.get(metric, metric), ha='right', va='center', rotation=0)
     ## Formatting
     for col, level in enumerate(levels):
         ax[0,col].set_title(level)
-        if (level in thresholds) and (not int(sw.GSw_PRM_CapCredit)):
-            ax[0,col].axhline(thresholds[level], c='k', ls=':', lw=0.75)
         leg = ax[0,col].legend(
             loc='upper left', frameon=False, fontsize=8,
             handletextpad=0.3, handlelength=0.7, columnspacing=0.5, labelspacing=0.2,
@@ -4292,7 +4309,7 @@ def plot_neue_bylevel(
     ax[0,0].set_ylim(0, min(ax[0,0].get_ylim()[1], 1000))
     plots.despine(ax)
 
-    return f, ax, dfin_neue
+    return f, ax, dfin_ra
 
 
 def map_neue(
@@ -4316,7 +4333,7 @@ def map_neue(
             case=case, year=year, samples=samples)
     else:
         _iteration = iteration
-    neue = reeds.io.read_output(case, f'neue_{year}i{_iteration}.csv')
+    neue = reeds.io.read_output(case, f'ra_metrics_{year}i{_iteration}.csv')
     neue = neue.loc[neue.metric==metric].set_index(['level','region']).NEUE
     sw = reeds.io.get_switches(case)
     neue_threshold = float(sw.GSw_PRM_StressThresholdNEUE.split('_')[1])
@@ -6632,8 +6649,8 @@ def map_prm(case, tmin=2023, cmap=cmocean.cm.rain, scale=3, fontsize=7, vmax=Non
     ### Get final iterations
     year2iteration = (
         pd.DataFrame([
-            os.path.basename(i).strip('neue_.csv').split('i')
-            for i in sorted(glob(os.path.join(case, 'outputs', 'neue_*.csv')))
+            os.path.basename(i).strip('ra_metrics.csv').split('i')
+            for i in sorted(glob(os.path.join(case, 'outputs', 'ra_metrics_*.csv')))
         ], columns=['year','iteration']).astype(int)
         .drop_duplicates(subset='year', keep='last')
         .set_index('year').iteration

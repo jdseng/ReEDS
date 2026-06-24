@@ -71,7 +71,7 @@ else:
 year = args.year
 
 # #%% Inputs for testing
-# case = os.path.join(reeds_path,'runs','v20251111_15M0_Pacific')
+# case = os.path.join(reeds_path,'runs','v20260624_raM1_MultiMetricRA')
 # year = 0
 # interactive = True
 # write = False
@@ -580,7 +580,7 @@ except Exception:
 try:
     plt.close()
     levels = ['country', 'interconnect', 'transreg', 'transgrp']
-    f, ax, _ = reedsplots.plot_neue_bylevel(case=case, levels=levels)
+    f, ax, _ = reedsplots.plot_ra_metrics_bylevel(case=case, levels=levels)
     savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
     if write:
         plt.savefig(os.path.join(savepath, savename))
@@ -717,13 +717,10 @@ if not int(sw.GSw_PRM_CapCredit):
         print(traceback.format_exc())
 
     try:
-        _first_metric = sw['GSw_PRM_StressThresholdMetrics'].split('/')[0].upper()
-        _parts = sw[f'GSw_PRM_StressThreshold{_first_metric}'].split('_')
-        level, threshold, metric = _parts[0], _parts[1], _parts[2]
+        level, threshold = sw['GSw_PRM_StressThresholdNEUE'].split('/')[0].split('_')
         plt.close()
-        f,ax = reedsplots.plot_stressperiod_evolution(
-            case=case, level=level, metric=metric)
-        savename = f'plot_stressperiod_evolution-{metric}-{level}.png'
+        f,ax = reedsplots.plot_stressperiod_evolution(case=case, level=level)
+        savename = f'plot_stressperiod_evolution-neue-{level}.png'
         if write:
             plt.savefig(os.path.join(savepath, savename))
         if interactive:
