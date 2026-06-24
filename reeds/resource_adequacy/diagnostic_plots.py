@@ -85,9 +85,11 @@ def get_inputs(sw):
     resources['tech'] = reeds.reedsplots.simplify_techs(resources.i, display_level = 'diagnostics')
     resources['rb'] = resources.r
 
-    new_stress_periods = pd.read_csv(
-        Path(sw.casedir, 'inputs_case', f'stress{sw.t}i{sw.iteration+1}', 'new_stress_periods.csv')
-    )
+    fpath = Path(sw.casedir, 'inputs_case', f'stress{sw.t}i{sw.iteration+1}', 'new_stress_periods.csv')
+    if fpath.is_file():
+        new_stress_periods = pd.read_csv(fpath)
+    else:
+        new_stress_periods = pd.DataFrame(columns=['period'])
 
     ##### Hourly dispatch by month
     ### Load and aggregate the VRE generation profiles by tech group
@@ -549,9 +551,7 @@ def plot_reeds_pras_capacity(sw, dfs):
 
     ### Get coordinates
     zones = dfs['hierarchy'].index
-    ncols = int(np.around(np.sqrt(len(zones)) * 1.618, 0))
-    nrows = len(zones) // ncols + int(bool(len(zones) % ncols))
-    coords = dict(zip(zones, [(row,col) for row in range(nrows) for col in range(ncols)]))
+    nrows, ncols, coords = reeds.plots.get_coordinates(zones)
 
     ### Plot the capacities
     plt.close()

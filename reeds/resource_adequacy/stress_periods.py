@@ -391,10 +391,14 @@ def check_threshold_and_choose_periods(
     this_test = ra_metrics[hierarchy_level][SWITCH_METRIC[stress_metric]]
     failed = this_test.loc[this_test > metric_threshold]
     if not len(failed):
-        print(f"{RA_SWITCHES[stress_metric]} = {criterion} passed")
+        print(f"{RA_SWITCHES[stress_metric]} = {criterion} passed:")
+        for i, val in this_test.items():
+            print(f'{i}: {val} {stress_metric}')
     else:
         print(f"{RA_SWITCHES[stress_metric]} = {criterion} failed for:")
-        print(failed)
+        for i, val in this_test.items():
+            print(f'{i}: {val} {stress_metric}')
+        ## Get new stress periods since the metric failed
         match stress_metric:
             case 'depth':
                 metric_periods = {
@@ -442,14 +446,6 @@ def check_threshold_and_choose_periods(
             .rename('value')
             .reset_index()
         )
-        for i, row in high_stress_periods.iterrows():
-            print(
-                f"Added {row.period} "
-                f"({reeds.timeseries.h2timestamp(row.period).strftime('%Y-%m-%d')}) "
-                f"as stress period for {row.region} "
-                f"({stress_metric} = {np.around(row.value, 3)})"
-            )
-
         ### Include "shoulder periods" before or after each period
         ### if the storage state of charge is low
         if stress_metric.lower() == 'neue':
