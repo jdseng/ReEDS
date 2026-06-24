@@ -327,7 +327,8 @@ def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods):
             timeindex == dfenergy_agg.loc[day.strftime(fmt)].iloc[0].name
         )[0][0]
 
-        day_before = timeindex[day_index - periodhours]
+        ## Loop around with % len(timeindex) if on the first or last day
+        day_before = timeindex[(day_index - periodhours) % len(timeindex)]
         day_after = timeindex[(day_index + periodhours) % len(timeindex)]
 
         if (
