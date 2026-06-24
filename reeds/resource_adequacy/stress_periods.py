@@ -1,5 +1,6 @@
 #%%### General imports
 import os
+import traceback
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,10 +64,10 @@ def get_pras_shortfall(case, t, iteration=0):
     return dictout
 
 
-def plot_stress_diagnostics(sw, t, iteration, high_stress_periods):
+def plot_stress_diagnostics(sw, t, iteration, new_stressperiods_write):
     try:
         dates = (
-            pd.concat(high_stress_periods)
+            new_stressperiods_write
             .reset_index().actual_period.map(reeds.timeseries.h2timestamp)
             .dt.strftime('%Y-%m-%d')
             .tolist()
@@ -87,8 +88,8 @@ def plot_stress_diagnostics(sw, t, iteration, high_stress_periods):
                 os.path.join(sw.casedir, 'outputs', 'figures', 'resource_adequacy', savename)
             )
             plt.close()
-    except Exception as err:
-        print(err)
+    except Exception:
+        print(traceback.format_exc())
 
 
 def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
@@ -314,7 +315,7 @@ def get_longest_events(
     return metric_period.groupby(level=0).sum()
 
 
-def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods, stress_metric):
+def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods):
     ## Stop if not needed
     if sw.GSw_PRM_StressStorageCutoff.lower() in ['off', '0', 'false']:
         print(
@@ -333,26 +334,27 @@ def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods, stres
     timeindex = reeds.timeseries.get_timeindex(sw['resource_adequacy_years'])
     cutofftype, cutoff = sw.GSw_PRM_StressStorageCutoff.lower().split('_')
     periodhours = {'day':24, 'wek':24*5, 'year':24}[sw.GSw_HourlyType]
+    fmt = '%Y-%m-%d'
 
     dfheadspace_MWh = dfenergy_agg.max() - dfenergy_agg
     dfheadspace_frac = dfheadspace_MWh / dfenergy_agg.max()
 
-    shoulder_periods = {}
+    _shoulder_periods = {}
     for i, row in high_stress_periods.iterrows():
         if row.region not in dfheadspace_MWh:
             continue
 
         day = reeds.timeseries.h2timestamp(row.period)
 
-        start_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'), row.region].iloc[0]
-        end_headspace_MWh = dfheadspace_MWh.loc[day.strftime('%Y-%m-%d'), row.region].iloc[-1]
+        start_headspace_MWh = dfheadspace_MWh.loc[day.strftime(fmt), row.region].iloc[0]
+        end_headspace_MWh = dfheadspace_MWh.loc[day.strftime(fmt), row.region].iloc[-1]
 
-        start_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'), row.region].iloc[0]
-        end_headspace_frac = dfheadspace_frac.loc[day.strftime('%Y-%m-%d'), row.region].iloc[-1]
+        start_headspace_frac = dfheadspace_frac.loc[day.strftime(fmt), row.region].iloc[0]
+        end_headspace_frac = dfheadspace_frac.loc[day.strftime(fmt), row.region].iloc[-1]
 
-        day_eue = high_stress_periods.loc[i, stress_metric]
+        day_eue = high_stress_periods.loc[i, 'value']
         day_index = np.where(
-            timeindex == dfenergy_agg.loc[day.strftime('%Y-%m-%d')].iloc[0].name
+            timeindex == dfenergy_agg.loc[day.strftime(fmt)].iloc[0].name
         )[0][0]
 
         day_before = timeindex[day_index - periodhours]
@@ -363,23 +365,33 @@ def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods, stres
             or ((cutofftype[:3] == 'cap') and (end_headspace_frac  >= float(cutoff)))
             or (cutofftype[:3] == 'abs')
         ):
-            shoulder_periods[criterion, f'after_{row.name}'] = pd.Series({
-                'actual_period':day_after.strftime('y%Yd%j'),
+            _shoulder_periods[f'after_{row.period}'] = pd.Series({
                 'region':row.region,
-            }).to_frame().T.set_index('actual_period')
-            print(f"Added {day_after} as shoulder stress period after {day}")
+                'period':day_after.strftime('y%Yd%j'),
+            })
+            print(
+                f"Added {day_after.strftime(fmt)} as shoulder stress period "
+                f"after {day.strftime(fmt)}"
+            )
 
         if (
             ((cutofftype == 'eue') and (start_headspace_MWh / day_eue >= float(cutoff)))
             or ((cutofftype[:3] == 'cap') and (start_headspace_frac  >= float(cutoff)))
             or (cutofftype[:3] == 'abs')
         ):
-            shoulder_periods[criterion, f'before_{row.name}'] = pd.Series({
-                'actual_period':day_before.strftime('y%Yd%j'),
+            _shoulder_periods[f'before_{row.period}'] = pd.Series({
                 'region':row.region,
-            }).to_frame().T.set_index('actual_period')
-            print(f"Added {day_before} as shoulder stress period before {day}")
+                'period':day_before.strftime('y%Yd%j'),
+            })
+            print(
+                f"Added {day_before.strftime(fmt)} as shoulder stress period "
+                f"before {day.strftime(fmt)}"
+            )
 
+    shoulder_periods = (
+        pd.concat(_shoulder_periods).unstack(level=1).reset_index()
+        .rename(columns={'index':'value'})[['region','period','value']]
+    )
     return shoulder_periods
 
 
@@ -423,7 +435,6 @@ def check_threshold_and_choose_periods(
                     for region in failed.index
                 }
             case 'duration':
-                ## TODO: Keep whole events (including when they span days)
                 metric_periods = {
                     region: get_longest_events(
                         sw=sw, t=t, iteration=iteration,
@@ -458,7 +469,7 @@ def check_threshold_and_choose_periods(
                 }
         high_stress_periods = (
             pd.concat(metric_periods, names=['region','period'])
-            .rename(stress_metric)
+            .rename('value')
             .reset_index()
         )
         for i, row in high_stress_periods.iterrows():
@@ -466,7 +477,7 @@ def check_threshold_and_choose_periods(
                 f"Added {row.period} "
                 f"({reeds.timeseries.h2timestamp(row.period).strftime('%Y-%m-%d')}) "
                 f"as stress period for {row.region} "
-                f"({stress_metric} = {row[stress_metric]})"
+                f"({stress_metric} = {np.around(row.value, 3)})"
             )
 
         ### Include "shoulder periods" before or after each period
@@ -477,10 +488,9 @@ def check_threshold_and_choose_periods(
                 criterion,
                 dfenergy_agg,
                 high_stress_periods,
-                stress_metric=stress_metric,
             )
         else:
-            shoulder_periods = {}
+            shoulder_periods = pd.DataFrame()
 
         return {
             'failed': failed,
@@ -514,9 +524,9 @@ def get_stress_periods(case, sw, t, iteration):
     )
 
     ### Check all stress criteria; for regions that fail, add new stress periods
-    failed = {}
-    high_stress_periods = {}
-    shoulder_periods = {}
+    _failed = {}
+    _high_stress_periods = {}
+    _shoulder_periods = {}
 
     stress_metrics = [i.lower() for i in sw.GSw_PRM_StressThresholdMetrics.split('/')]
     for stress_metric in stress_metrics:
@@ -542,30 +552,39 @@ def get_stress_periods(case, sw, t, iteration):
                 stressperiods_this_iteration,
             )
             if dictout is not None:
-                failed.update(dictout['failed'])
-                high_stress_periods.update(dictout['high_stress_periods'])
-                shoulder_periods.update(dictout['shoulder_periods'])
+                _failed[stress_metric, criterion] = dictout['failed']
+                _high_stress_periods[stress_metric, criterion] = dictout['high_stress_periods']
+                _shoulder_periods[stress_metric, criterion] = dictout['shoulder_periods']
+
+    failed = pd.concat(_failed)
+    high_stress_periods = pd.concat(_high_stress_periods)
+    shoulder_periods = pd.concat(_shoulder_periods)
 
     ### Get lists of stress periods: new (added this iteration) and all
     if len(failed):
         new_stress_periods = pd.concat(
-            {**high_stress_periods, **shoulder_periods}, names=['criterion','periodtype'],
-        ).reset_index().drop_duplicates(subset='actual_period', keep='first')
+            {'stress':high_stress_periods, 'shoulder':shoulder_periods},
+            names=['periodtype','metric','criterion','num'],
+        ).reset_index()
+        print('All identified stress periods:')
+        print(new_stress_periods)
+        new_stress_periods = new_stress_periods.drop_duplicates('period')
     else:
         return failed, None, None
 
     ## Reproduce the format of inputs_case/stress_period_szn.csv
     p = 'w' if sw.GSw_HourlyType == 'wek' else 'd'
     new_stressperiods_write = pd.DataFrame({
-        'rep_period': new_stress_periods.actual_period,
-        'year': new_stress_periods.actual_period.map(
+        'rep_period': new_stress_periods.period,
+        'year': new_stress_periods.period.map(
             lambda x: int(x.strip('sy').split(p)[0])),
-        'yperiod': new_stress_periods.actual_period.map(
+        'yperiod': new_stress_periods.period.map(
             lambda x: int(x.strip('sy').split(p)[1])),
-        'actual_period': new_stress_periods.actual_period,
+        'actual_period': new_stress_periods.period,
     })
 
-    ### Add new stress periods to the stress periods used for this year/iteration, then write
+    ### Add new stress periods to the stress periods used for this year/iteration,
+    ### drop duplicates, then write
     newstresspath = f'stress{t}i{iteration+1}'
     os.makedirs(os.path.join(sw['casedir'], 'inputs_case', newstresspath), exist_ok=True)
     outpath = os.path.join(sw['casedir'], 'inputs_case', newstresspath, 'period_szn.csv')
@@ -584,19 +603,11 @@ def get_stress_periods(case, sw, t, iteration):
         combined_periods_write.to_csv(outpath, index=False)
 
     ### Tables and plots for debugging
-    stress_metric_labels = {
-        'NEUE': 'neue_ppm',
-        'LOLD': 'lold_event-days/year',
-        'LOLH': 'lolh_event-hours/year',
-        'LOLE': 'lole_events/year',
-        'Duration': 'duration_hours',
-        'Depth': 'depth_fraction',
-    }
-    new_stress_periods.round(2).rename(columns=stress_metric_labels).to_csv(
+    new_stress_periods.to_csv(
         os.path.join(sw.casedir, 'inputs_case', newstresspath, 'new_stress_periods.csv'),
         index=False,
     )
-    plot_stress_diagnostics(sw, t, iteration, high_stress_periods)
+    plot_stress_diagnostics(sw, t, iteration, new_stressperiods_write)
 
     return failed, new_stressperiods_write, combined_periods_write
 
