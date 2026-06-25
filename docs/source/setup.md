@@ -31,7 +31,8 @@ Screenshot of running "Command Prompt" with "Run as administrator"
 ```
 
 ### Python Configuration
-#### Windows
+`````{tab-set}
+````{tab-item} Windows
 Install Anaconda: [https://www.anaconda.com/download](https://www.anaconda.com/download).
 
 **IMPORTANT** : Be sure to download the Windows version of the installer.
@@ -81,8 +82,9 @@ Append the Path environment
 
 Screenshot of a test of Python in the terminal window
 ```
+````
 
-#### MacOS
+````{tab-item} macOS / Linux
 Download the latest version of Anaconda: [https://www.anaconda.com/download](https://www.anaconda.com/download)
 
 During Installation, select to install Anaconda for your machine only.
@@ -105,6 +107,8 @@ Image of Anaconda Install Mac - Customize Installation Type
 
 Python should initiate, looking similar to {numref}`figure-python-test`.
 
+````
+`````
 
 #### Conda Environment Setup
 
@@ -158,29 +162,23 @@ The ReEDS source code is hosted on GitHub at <https://github.com/ReEDS-Model/ReE
 git lfs install
 ```
 
-3. Clone the ReEDS repository on your desktop. Alternatively, download a ZIP from GitHub ({numref}`figure-github-download`).
-
-```{figure} figs/readme/github-download.png
-:name: figure-github-download
-
-Screenshot of GitHub links to clone the ReEDS repository or download ZIP of the ReEDS files
-```
+3. Clone the ReEDS repository on your desktop or download a ZIP from GitHub.
 
 ### ReEDS2PRAS, Julia, and Stress Periods Setup
 Julia will need to be installed and set up to successfully run the model since ReEDS uses stress periods by default. The recommended way to install Julia is via **juliaup**, the official Julia version manager, which makes it easy to install and switch between specific Julia versions. Julia `1.12.1` is the currently tested version across all platforms.
 
 #### Step 1: Install juliaup
 
-````{tab-set}
-```{tab-item} Windows
+`````{tab-set}
+````{tab-item} Windows
 Install juliaup using `winget` from a terminal (Command Prompt or PowerShell):
 
     winget install --id Julialang.juliaup
 
 Alternatively, install from the [Microsoft Store](https://www.microsoft.com/store/apps/9NJNWW8PVKMN).
-```
+````
 
-```{tab-item} macOS / Linux
+````{tab-item} macOS / Linux
 Run the following command from a terminal:
 
     curl -fsSL https://install.julialang.org | sh
@@ -190,8 +188,8 @@ Follow the on-screen prompts. When installation is complete, open a new terminal
 macOS and Linux users can also install via Homebrew:
 
     brew install juliaup
-```
 ````
+`````
 
 Verify the installation was successful:
 ```
@@ -224,15 +222,15 @@ julia --project=. instantiate.jl
 
 #### Troubleshooting Issues with Julia Setup
 
-**Windows**
-
+`````{tab-set}
+````{tab-item} Windows
 When setting up Julia on Windows, you may run into some issues when running `julia --project=. instantiate.jl`. The following steps can be followed to help resolve issues and get Julia set up successfully:
 
 1. If you've used another version of Julia (from the reeds2 conda environment or a previous installation), you may get errors about conflicting manifest. To get past this, you can delete the `Manifest.toml` file with `rm Manifest.toml` (on Unix systems) or `del Manifest.toml` (on Windows systems). 
 
-1. Manually install [Random123](https://github.com/JuliaRandom/Random123.jl)
+2. Manually install [Random123](https://github.com/JuliaRandom/Random123.jl)
 
-2. Re-run `julia --project=. instantiate.jl`
+3. Re-run `julia --project=. instantiate.jl`
 
 If that doesn't resolve the issue, try a clean install using juliaup:
 
@@ -257,8 +255,9 @@ If that doesn't resolve the issue, try a clean install using juliaup:
     * `TimeZones.build()`
 
 1. You can then leave the Julia command line by typing `exit()`
+````
 
-**macOS / Linux**
+````{tab-item} macOS / Linux
 
 If you experience issues, try the following:
 
@@ -281,6 +280,8 @@ If you experience issues, try the following:
     ```
     julia --project=. instantiate.jl
     ```
+````
+`````
 
 ## Running ReEDS
 
