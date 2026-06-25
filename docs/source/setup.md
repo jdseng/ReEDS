@@ -336,7 +336,6 @@ Additional resources and learning:
 * [GitHub README](https://github.com/ReEDS-Model/ReEDS/blob/main/README.md)
 * [YouTube tutorials](https://www.youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC)
 * [GAMS language information](https://www.gams.com/latest/docs/UG_MAIN.html#UG_Language_Environment)
-* [Tips and tricks for the bash shell](https://nlr-my.sharepoint.com/:p:/r/personal/ssundar_nrel_gov/Documents/Microsoft%20Teams%20Chat%20Files/02062024_what_the_shell.pptx?d=wa7aea3514f814d51924bf2dfa737d414&csf=1&web=1&e=qr1YuP)
 
 ## Internal ReEDS Documentation
 See the [NLR Specific ReEDS Documentation](https://nrel.sharepoint.com/:w:/s/ReEDS/Efathg8KjjtCkxW44vZpWQQBA2KsU3RadSsVauBMskEfUA?e=YaSIqc). Information on Yampa and HPC setup can be found there.
