@@ -472,12 +472,12 @@ for case in tqdm(cases, desc='runtime'):
 dictin_neue = {}
 dictin_neue_all = {}
 for case in tqdm(cases, desc='NEUE'):
-    infiles = sorted(glob(os.path.join(cases[case],'outputs','neue_*.csv')))
+    infiles = sorted(glob(os.path.join(cases[case],'outputs','ra_metrics_*.csv')))
     if not len(infiles):
         continue
     df = {}
     for f in infiles:
-        y, i = [int(s) for s in os.path.basename(f).strip('neue_.csv').split('i')]
+        y, i = [int(s) for s in os.path.basename(f).strip('ra_metrics_.csv').split('i')]
         df[y,i] = pd.read_csv(f, index_col=['level', 'metric', 'region']).squeeze(1)
     dictin_neue_all[case] = pd.concat(df, names=('t', 'iteration'))
     indices = ['t', 'level', 'metric', 'region']
@@ -2517,7 +2517,7 @@ metrics = [
 ]
 for figname, width, height in [
     (f'map_gencap_transcap-{lastyear}', None, SLIDE_HEIGHT),
-    (f'plot_stressperiod_evolution-sum-{level}', SLIDE_WIDTH, None),
+    (f'plot_stressperiod_evolution-neue-{level}', SLIDE_WIDTH, None),
     (f'plot_dispatch-yearbymonth-1-{lastyear}', SLIDE_WIDTH, None),
     ## Include both versions for backwards compatibility
     (f'plot_dispatch-yearbymonth-1-{lastyear}-w{weatheryear}', SLIDE_WIDTH, None),

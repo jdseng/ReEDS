@@ -581,7 +581,7 @@ try:
     plt.close()
     levels = ['country', 'interconnect', 'transreg', 'transgrp']
     f, ax, _ = reedsplots.plot_ra_metrics_bylevel(case=case, levels=levels)
-    savename = f"plot_stressperiod_neue-{','.join(levels)}.png"
+    savename = f"plot_ra_metrics-{','.join(levels)}.png"
     if write:
         plt.savefig(os.path.join(savepath, savename))
     if interactive:

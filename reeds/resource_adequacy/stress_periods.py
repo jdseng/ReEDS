@@ -94,11 +94,12 @@ def get_events(ds:pd.Series, threshold:float=0) -> pd.DataFrame:
             'timesteps': len(event),
             'max': event.max(),
             'sum': event.sum(),
+            'profile': event.round(1).values,
         })
     if len(events):
         dfout = pd.DataFrame(events)
     else:
-        dfout = pd.DataFrame(columns=['start','end','timesteps','max','sum'])
+        dfout = pd.DataFrame(columns=['start','end','timesteps','max','sum','profile'])
     return dfout
 
 
@@ -780,6 +781,8 @@ def main(sw, t, iteration=0, logging=True):
 
     #%% Write EUE events
     eue_events = get_eue_events(case=sw.casedir, t=t, iteration=iteration)
+    ## Store the profile as a |-delimited string
+    eue_events.profile = eue_events.profile.map(lambda x: '|'.join(str(i) for i in x))
     eue_events.round(3).to_csv(
         os.path.join(sw.casedir, 'outputs', f'eue_events_{t}i{iteration}.csv')
     )
