@@ -257,18 +257,12 @@ def get_shortfall_periods(
 
 
 def get_longest_events(
+    dsmetric,
     sw,
-    t:int,
-    iteration:int,
-    hierarchy_level:str,
-    region:str,
     num_events:int=1,
 ):
-    ## Get the already-identified events
-    fpath = Path(sw.casedir, 'outputs', f'eue_events_{t}i{iteration}.csv')
     eue_events = (
-        pd.read_csv(fpath, index_col=['level','region','number'])
-        .loc[hierarchy_level].loc[region]
+        get_events(dsmetric)
         .sort_values('timesteps', ascending=False)
         .head(num_events)
     )
@@ -378,7 +372,6 @@ def check_threshold_and_choose_periods(
     dfeue_agg,
     dflole_agg,
     dfenergy_agg,
-    stressperiods_this_iteration,
 ):
     ## NEUE Example: criterion = 'transgrp_1'
     hierarchy_level, metric_threshold = criterion.split('_')
@@ -413,10 +406,17 @@ def check_threshold_and_choose_periods(
                     for region in failed.index
                 }
             case 'duration':
+                ## NOTE: This approach adds the next-longest event if the longest event is
+                ## already included as a stress period (since we've dropped the already-
+                ## included stress periods from dfeue_agg above). That's less likely to
+                ## help meet a max-duration threshold than adding the next-worst EUE day
+                ## is to help meet a NEUE threshold. So consider if there's something else
+                ## we should do if the longest-event day is already a stress period but
+                ## we're still not meeting the duration threshold.
                 metric_periods = {
                     region: get_longest_events(
-                        sw=sw, t=t, iteration=iteration,
-                        hierarchy_level=hierarchy_level, region=region,
+                        dfeue_agg[region], sw=sw,
+                        num_events=int(sw.GSw_PRM_StressIncrement),
                     )
                     for region in failed.index
                 }
@@ -492,6 +492,23 @@ def get_stress_periods(case, sw, t, iteration):
         os.path.join(
             sw['casedir'], 'inputs_case', f'stress{t}i{iteration}', 'period_szn.csv')
     )
+    stressperiods_this_iteration['start'] = (
+        stressperiods_this_iteration.actual_period.map(reeds.timeseries.h2timestamp)
+    )
+    stressperiods_this_iteration['end'] = (
+        stressperiods_this_iteration['start']
+        + (
+            (pd.Timedelta('5D') if sw.GSw_HourlyType == 'wek' else pd.Timedelta('1D'))
+             - pd.Timedelta('1H')
+        )
+    )
+    ## Get already-modeled stress hours so we can exclude them from the hourly
+    ## EUE and LOLE profiles used to determine new stress periods
+    covered_hours = [
+        pd.date_range(row.start, row.end, freq='1H')
+        for i,row in stressperiods_this_iteration.iterrows()
+    ]
+    covered_hours = [i for sublist in covered_hours for i in sublist]
 
     ### Check all stress criteria; for regions that fail, add new stress periods
     _failed = {}
@@ -506,9 +523,9 @@ def get_stress_periods(case, sw, t, iteration):
             ## Example: criterion = 'transgrp_1'
             hierarchy_level, metric_threshold = criterion.split('_')
             rmap = reeds.io.get_rmap(case=case, hierarchy_level=hierarchy_level)
-            dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum()
-            dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max()
-            dfenergy_agg = dfenergy.rename(columns=rmap).groupby(axis=1, level=0).sum()
+            dfeue_agg = dfeue.rename(columns=rmap).groupby(axis=1, level=0).sum().drop(covered_hours)
+            dflole_agg = dflole.rename(columns=rmap).groupby(axis=1, level=0).max().drop(covered_hours)
+            dfenergy_agg = dfenergy.rename(columns=rmap).groupby(axis=1, level=0).sum().drop(covered_hours)
             ## Get the stress periods
             dictout = check_threshold_and_choose_periods(
                 stress_metric,
@@ -519,7 +536,6 @@ def get_stress_periods(case, sw, t, iteration):
                 dfeue_agg,
                 dflole_agg,
                 dfenergy_agg,
-                stressperiods_this_iteration,
             )
             if dictout is not None:
                 _failed[stress_metric, criterion] = dictout['failed']
@@ -537,7 +553,13 @@ def get_stress_periods(case, sw, t, iteration):
         ).reset_index()
         print('All identified stress periods:')
         print(new_stress_periods)
+        ## Remove the existing stress periods and duplicates across regions
+        new_stress_periods = new_stress_periods.loc[
+            ~new_stress_periods.period.isin(stressperiods_this_iteration.actual_period)
+        ].copy()
         new_stress_periods = new_stress_periods.drop_duplicates('period')
+        print('New stress periods after dropping duplicates:')
+        print(new_stress_periods)
     else:
         return {}, {}, {}
 
