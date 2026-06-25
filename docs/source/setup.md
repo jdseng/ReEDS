@@ -133,6 +133,8 @@ NLR uses GAMS versions 51.3.0 and 49.6.0; however, older versions might also wor
 For more information on getting a trial license for GAMS, see the [FAQ](faq.md#table-of-contents)
 
 1. Install GAMS: [https://www.gams.com/download/](https://www.gams.com/download/)
+    
+    
     **If installing on Mac:** on the "Installation" page, click "customize" and ensure the box to "Add GAMS to PATH" is checked.
 
     ```{figure} figs/readme/gams-install-mac.png
@@ -331,7 +333,6 @@ If you'd like practice with running a specific ReEDS scenario, you can walk thro
 
 Additional resources and learning:
 * [General information on ReEDS](https://www.nlr.gov/analysis/reeds/)
-* [ReEDS POC list](https://nrel.sharepoint.com/:w:/s/ReEDS/ES6GQTyzXo1DnnCPlnAhg5QB8cPY--_01HkQkiOnrPskxw?e=flEAtY)
 * [GitHub README](https://github.com/ReEDS-Model/ReEDS/blob/main/README.md)
 * [YouTube tutorials](https://www.youtube.com/playlist?list=PLmIn8Hncs7bG558qNlmz2QbKhsv7QCKiC)
 * [GAMS language information](https://www.gams.com/latest/docs/UG_MAIN.html#UG_Language_Environment)
