@@ -6538,6 +6538,58 @@ def map_stressors(
         yield f, ax, dfout, plotlabel
 
 
+def plot_eue_events(
+    case, year=None, level='transgrp',
+    xval:Literal['timesteps','mean','max','sum']='timesteps',
+    yval:Literal['timesteps','mean','max','sum']='mean',
+    scale=1, alpha=0.7,
+):
+    """
+    Plot event metrics against each other for all regions in specified level (columns)
+    and for each iteration in specified year (rows)
+    """
+    sw = reeds.io.get_switches(case)
+    dflevel = reeds.io.get_dfmap(case)[level]
+    regions = dflevel.bounds.minx.sort_values().index
+    year = int(sw.endyear) if not year else year
+    iterations = get_stressperiods(case).loc[year].index.get_level_values('iteration').unique()
+    units = {'timesteps':'hours', 'mean':'MW', 'max':'MW', 'sum':'MWh'}
+
+    nrows, ncols, coords = layout_subplots(
+        row_list=iterations, col_list=regions,
+        oneaxis=('columns' if len(regions) > 1 else 'rows'),
+    )
+    dictout = {}
+
+    plt.close()
+    f,ax = plt.subplots(
+        nrows, ncols, figsize=(scale*ncols, scale*nrows),
+        sharex=True, sharey='col',
+    )
+    for iteration in iterations:
+        ## Get events
+        fpath = Path(case, 'outputs', f'eue_events_{year}i{iteration}.csv')
+        events = pd.read_csv(fpath, index_col=['level','region','number']).loc[level]
+        events['mean'] = events['sum'] / events['timesteps']
+        dictout[iteration] = events
+        ## Plot for each region and iteration
+        for region in regions:
+            _ax = ax[coords[iteration, region]] if nrows + ncols > 2 else ax
+            _ax.plot(
+                events[xval], events[yval], lw=0, alpha=alpha,
+                marker='o', markersize=3, markeredgewidth=0, color='C3',
+            )
+            ## Formatting
+            if iteration == 0:
+                _ax.set_title(region, weight='bold')
+            if iteration == max(iterations):
+                if region == regions[0]:
+                    _ax.set_ylabel(f'EUE {yval} ({units[yval]})', y=0, ha='left')
+                    _ax.set_xlabel(f'EUE {xval} ({units[xval]})', x=0, ha='left')
+    reeds.plots.despine(ax)
+    return f, ax, dictout
+
+
 def layout_subplots(row_list, col_list, oneaxis='columns'):
     """
     Lay out series of row_list (e.g. cases) and col_list (e.g. years) into array of subplots,

@@ -5,6 +5,7 @@ import os
 import sys
 import argparse
 import traceback
+import itertools
 import cmocean
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import reeds
@@ -589,7 +590,28 @@ try:
     plt.close()
     print(savename)
 except Exception:
-    print('plot_stressperiod_neue failed:')
+    print('plot_ra_metrics_bylevel failed:')
+    print(traceback.format_exc())
+
+try:
+    plt.close()
+    level = 'transgrp'
+    xvals = ['timesteps']
+    yvals = ['mean','max']
+    for xval, yval in itertools.product(xvals, yvals):
+        f, ax, _ = reedsplots.plot_eue_events(
+            case=case, year=year, level=level,
+            xval=xval, yval=yval,
+        )
+        savename = f"plot_eue_events-{yval}_{xval}-{level}-{year}.png"
+        if write:
+            plt.savefig(os.path.join(savepath, savename))
+        if interactive:
+            plt.show()
+        plt.close()
+        print(savename)
+except Exception:
+    print('plot_eue_events failed:')
     print(traceback.format_exc())
 
 try:
