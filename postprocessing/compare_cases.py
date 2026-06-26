@@ -2149,49 +2149,49 @@ try:
 except Exception:
     print(traceback.format_exc())
 
-# #%%### Interregional transfer capability to peak demand ratio
-# try:
-#     f, ax, dfplot = reedsplots.plot_interreg_transfer_cap_ratio(
-#         case=list(cases.values()),
-#         colors={v: colors[k] for k,v in cases.items()},
-#         casenames={v:k for k,v in cases.items()},
-#         level='transreg', tstart=startyear,
-#         ymax=None,
-#     )
-#     ### Save it
-#     slide = reeds.report_utils.add_to_pptx(
-#         'Interregional Transmission / Peak Demand',
-#         prs=prs,
-#         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
-#         width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
-#     )
-#     if interactive:
-#         plt.show()
+#%%### Interregional transfer capability to peak demand ratio
+try:
+    f, ax, dfplot = reedsplots.plot_interreg_transfer_cap_ratio(
+        case=list(cases.values()),
+        colors={v: colors[k] for k,v in cases.items()},
+        casenames={v:k for k,v in cases.items()},
+        level='transreg', tstart=startyear,
+        ymax=None,
+    )
+    ### Save it
+    slide = reeds.report_utils.add_to_pptx(
+        'Interregional Transmission / Peak Demand',
+        prs=prs,
+        height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
+        width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
+    )
+    if interactive:
+        plt.show()
 
-# except Exception:
-#     print(traceback.format_exc())
+except Exception:
+    print(traceback.format_exc())
 
 
-# #%%### Max firm imports
-# try:
-#     f, ax, dfplot = reedsplots.plot_max_imports(
-#         case=list(cases.values()),
-#         colors={v: colors[k] for k,v in cases.items()},
-#         casenames={v:k for k,v in cases.items()},
-#         level='nercr', tstart=startyear,
-#     )
-#     ### Save it
-#     slide = reeds.report_utils.add_to_pptx(
-#         'Max Net Stress Imports / Peak Demand',
-#         prs=prs,
-#         height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
-#         width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
-#     )
-#     if interactive:
-#         plt.show()
+#%%### Max firm imports
+try:
+    f, ax, dfplot = reedsplots.plot_max_imports(
+        case=list(cases.values()),
+        colors={v: colors[k] for k,v in cases.items()},
+        casenames={v:k for k,v in cases.items()},
+        level='nercr', tstart=startyear,
+    )
+    ### Save it
+    slide = reeds.report_utils.add_to_pptx(
+        'Max Net Stress Imports / Peak Demand',
+        prs=prs,
+        height=(SLIDE_HEIGHT if ax.shape[1] <= 8 else None),
+        width=(SLIDE_WIDTH if ax.shape[1] > 8 else None),
+    )
+    if interactive:
+        plt.show()
 
-# except Exception:
-#     print(traceback.format_exc())
+except Exception:
+    print(traceback.format_exc())
 
 
 #%%### Transmission maps
@@ -2303,199 +2303,199 @@ try:
 except Exception:
     print(traceback.format_exc())
 
-# #%% Flexibly sited load
-# try:
-#     if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
-#         loadsite_cases = {
-#             k:v for k,v in cases.items() if float(dictin_sw[k].get('GSw_LoadSiteCF', 0))
-#         }
-#         f, ax, dictplot = reeds.reedsplots.map_output_byyear(
-#             case=loadsite_cases,
-#             param='loadsite_cap',
-#             years=[lastyear],
-#             vscale=1e-3,
-#             vmin=0,
-#             title='Sited demand [GW]',
-#         )
-#         ## Save it
-#         slide = reeds.results.add_to_pptx('Flexibly Sited Demand', prs=prs, width=SLIDE_WIDTH)
-#         if interactive:
-#             plt.show()
-# except Exception:
-#     print(traceback.format_exc())
+#%% Flexibly sited load
+try:
+    if any([float(dictin_sw[c].get('GSw_LoadSiteCF', 0)) for c in cases]):
+        loadsite_cases = {
+            k:v for k,v in cases.items() if float(dictin_sw[k].get('GSw_LoadSiteCF', 0))
+        }
+        f, ax, dictplot = reeds.reedsplots.map_output_byyear(
+            case=loadsite_cases,
+            param='loadsite_cap',
+            years=[lastyear],
+            vscale=1e-3,
+            vmin=0,
+            title='Sited demand [GW]',
+        )
+        ## Save it
+        slide = reeds.results.add_to_pptx('Flexibly Sited Demand', prs=prs, width=SLIDE_WIDTH)
+        if interactive:
+            plt.show()
+except Exception:
+    print(traceback.format_exc())
 
-# #%%### RA sharing
-# if detailed:
-#     try:
-#         ralevel = 'transreg'
-#         scale = 10
-#         wscale = 7e3
-#         dfmap = reeds.io.get_dfmap(cases[basecase])
-#         regions = dfmap[ralevel].bounds.minx.sort_values().index
+#%%### RA sharing
+if detailed:
+    try:
+        ralevel = 'transreg'
+        scale = 10
+        wscale = 7e3
+        dfmap = reeds.io.get_dfmap(cases[basecase])
+        regions = dfmap[ralevel].bounds.minx.sort_values().index
 
-#         ### Calculate aggregated load
-#         dictin_load_stress_agg = {}
-#         for case in cases:
-#             if int(dictin_sw[case].GSw_PRM_CapCredit):
-#                 hcol = 'ccseason'
-#                 df = dictin_peak_ccseason[case].copy()
-#             else:
-#                 hcol = 'h'
-#                 df = dictin_load_stress[case].copy()
-#             df = (
-#                 df.assign(region=df.r.map(hierarchy[case][ralevel]))
-#                 .groupby(['t','region',hcol]).GW.sum()
-#                 .loc[lastyear].unstack('region')
-#             )
-#             dictin_load_stress_agg[case] = df.sum()
+        ### Calculate aggregated load
+        dictin_load_stress_agg = {}
+        for case in cases:
+            if int(dictin_sw[case].GSw_PRM_CapCredit):
+                hcol = 'ccseason'
+                df = dictin_peak_ccseason[case].copy()
+            else:
+                hcol = 'h'
+                df = dictin_load_stress[case].copy()
+            df = (
+                df.assign(region=df.r.map(hierarchy[case][ralevel]))
+                .groupby(['t','region',hcol]).GW.sum()
+                .loc[lastyear].unstack('region')
+            )
+            dictin_load_stress_agg[case] = df.sum()
 
-#         ### Calculate aggregated stress period flows
-#         tran_flow_stress_agg = {}
-#         for case in cases:
-#             if int(dictin_sw[case].GSw_PRM_CapCredit):
-#                 df = dictin_prmtrade[case].copy()
-#                 hcol = 'ccseason'
-#             else:
-#                 df = dictin_tran_flow_stress[case].copy()
-#                 hcol = 'h'
-#             df['aggreg'] = df.r.map(hierarchy[case][ralevel])
-#             df['aggregg'] = df.rr.map(hierarchy[case][ralevel])
-#             df['interface'] = df.aggreg + '|' + df.aggregg
+        ### Calculate aggregated stress period flows
+        tran_flow_stress_agg = {}
+        for case in cases:
+            if int(dictin_sw[case].GSw_PRM_CapCredit):
+                df = dictin_prmtrade[case].copy()
+                hcol = 'ccseason'
+            else:
+                df = dictin_tran_flow_stress[case].copy()
+                hcol = 'h'
+            df['aggreg'] = df.r.map(hierarchy[case][ralevel])
+            df['aggregg'] = df.rr.map(hierarchy[case][ralevel])
+            df['interface'] = df.aggreg + '|' + df.aggregg
 
-#             df = (
-#                 df
-#                 .loc[df.aggreg != df.aggregg]
-#                 .groupby(['t',hcol,'interface']).GW.sum().unstack('interface').fillna(0)
-#             )
-#             if df.empty:
-#                 continue
-#             else:
-#                 df = df.loc[lastyear].copy()
-#             ## Order interfaces alphabetically
-#             rename = {}
-#             for interface in df:
-#                 r, rr = interface.split('|')
-#                 if r > rr:
-#                     rename[interface] = f'{rr}|{r}'
-#                     df[interface] *= -1
-#             df = df.rename(columns=rename).groupby(axis=1, level=0).sum()
-#             ## Now reorder interfaces by flow
-#             rename = {}
-#             for interface in df:
-#                 r, rr = interface.split('|')
-#                 if df[interface].clip(lower=0).sum() < df[interface].clip(upper=0).abs().sum():
-#                     rename[interface] = f'{rr}|{r}'
-#                     df[interface] *= -1
-#             tran_flow_stress_agg[case] = df.rename(columns=rename).copy()
+            df = (
+                df
+                .loc[df.aggreg != df.aggregg]
+                .groupby(['t',hcol,'interface']).GW.sum().unstack('interface').fillna(0)
+            )
+            if df.empty:
+                continue
+            else:
+                df = df.loc[lastyear].copy()
+            ## Order interfaces alphabetically
+            rename = {}
+            for interface in df:
+                r, rr = interface.split('|')
+                if r > rr:
+                    rename[interface] = f'{rr}|{r}'
+                    df[interface] *= -1
+            df = df.rename(columns=rename).groupby(axis=1, level=0).sum()
+            ## Now reorder interfaces by flow
+            rename = {}
+            for interface in df:
+                r, rr = interface.split('|')
+                if df[interface].clip(lower=0).sum() < df[interface].clip(upper=0).abs().sum():
+                    rename[interface] = f'{rr}|{r}'
+                    df[interface] *= -1
+            tran_flow_stress_agg[case] = df.rename(columns=rename).copy()
 
-#         ### Calculate regional imports/exports
-#         dfimportexport = {}
-#         for case in cases:
-#             df = {}
-#             for region in regions:
-#                 df[region] = reedsplots.get_import_export(
-#                     region=region, df=tran_flow_stress_agg[case]
-#                 )
-#             dfimportexport[case] = pd.concat(df).sum(axis=1).unstack(level=0)
-#             dfimportexport[case].columns = dfimportexport[case].columns.rename('region')
+        ### Calculate regional imports/exports
+        dfimportexport = {}
+        for case in cases:
+            df = {}
+            for region in regions:
+                df[region] = reedsplots.get_import_export(
+                    region=region, df=tran_flow_stress_agg[case]
+                )
+            dfimportexport[case] = pd.concat(df).sum(axis=1).unstack(level=0)
+            dfimportexport[case].columns = dfimportexport[case].columns.rename('region')
 
-#         ### Plot it
-#         whiteout = dict(zip(
-#             [f'C{i}' for i in range(10)],
-#             [plt.cm.tab20(i*2+1) for i in range(10)]
-#         ))
-#         if any([v not in whiteout for v in list(colors.values())]):
-#             whiteout = {v: (v[0], v[1], v[2], v[3]*0.7) for v in list(colors.values())}
+        ### Plot it
+        whiteout = dict(zip(
+            [f'C{i}' for i in range(10)],
+            [plt.cm.tab20(i*2+1) for i in range(10)]
+        ))
+        if any([v not in whiteout for v in list(colors.values())]):
+            whiteout = {v: (v[0], v[1], v[2], v[3]*0.7) for v in list(colors.values())}
 
-#         for label in ['max','average']:
-#             plt.close()
-#             f,ax = plt.subplots(
-#                 nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
-#                 gridspec_kw={'wspace':0.0,'hspace':-0.1},
-#             )
+        for label in ['max','average']:
+            plt.close()
+            f,ax = plt.subplots(
+                nrows, ncols, figsize=(SLIDE_WIDTH, SLIDE_HEIGHT),
+                gridspec_kw={'wspace':0.0,'hspace':-0.1},
+            )
 
-#             for case in cases:
-#                 ### Formatting
-#                 dfmap[ralevel].plot(ax=ax[coords[case]], facecolor='none', edgecolor='C7', lw=0.5)
-#                 dfmap['interconnect'].plot(ax=ax[coords[case]], facecolor='none', edgecolor='k', lw=1)
-#                 ax[coords[case]].set_title(
-#                     case, y=0.95, weight='bold', color=colors[case], fontsize=14)
-#                 ax[coords[case]].axis('off')
+            for case in cases:
+                ### Formatting
+                dfmap[ralevel].plot(ax=ax[coords[case]], facecolor='none', edgecolor='C7', lw=0.5)
+                dfmap['interconnect'].plot(ax=ax[coords[case]], facecolor='none', edgecolor='k', lw=1)
+                ax[coords[case]].set_title(
+                    case, y=0.95, weight='bold', color=colors[case], fontsize=14)
+                ax[coords[case]].axis('off')
 
-#                 ### RA flows
-#                 if case not in tran_flow_stress_agg:
-#                     continue
+                ### RA flows
+                if case not in tran_flow_stress_agg:
+                    continue
 
-#                 if label == 'max':
-#                     ## Max flow
-#                     forwardwidth = tran_flow_stress_agg[case].clip(lower=0).max()
-#                     reversewidth = abs(tran_flow_stress_agg[case].clip(upper=0).min())
-#                 else:
-#                     ## Average when it's flowing
-#                     forwardwidth = (
-#                         tran_flow_stress_agg[case].clip(lower=0).sum()
-#                         / tran_flow_stress_agg[case].clip(lower=0).astype(bool).sum()
-#                     )
-#                     reversewidth = (
-#                         tran_flow_stress_agg[case].clip(upper=0).abs().sum()
-#                         / tran_flow_stress_agg[case].clip(upper=0).abs().astype(bool).sum()
-#                     )
+                if label == 'max':
+                    ## Max flow
+                    forwardwidth = tran_flow_stress_agg[case].clip(lower=0).max()
+                    reversewidth = abs(tran_flow_stress_agg[case].clip(upper=0).min())
+                else:
+                    ## Average when it's flowing
+                    forwardwidth = (
+                        tran_flow_stress_agg[case].clip(lower=0).sum()
+                        / tran_flow_stress_agg[case].clip(lower=0).astype(bool).sum()
+                    )
+                    reversewidth = (
+                        tran_flow_stress_agg[case].clip(upper=0).abs().sum()
+                        / tran_flow_stress_agg[case].clip(upper=0).abs().astype(bool).sum()
+                    )
 
-#                 interfaces = tran_flow_stress_agg[case].columns
-#                 numdays = (
-#                     len(tran_flow_stress_agg[case])
-#                     * int(dictin_sw[case].GSw_HourlyChunkLengthStress)
-#                     // 24
-#                 )
+                interfaces = tran_flow_stress_agg[case].columns
+                numdays = (
+                    len(tran_flow_stress_agg[case])
+                    * int(dictin_sw[case].GSw_HourlyChunkLengthStress)
+                    // 24
+                )
 
-#                 ### Head/tail length:
-#                 gwh_forward = tran_flow_stress_agg[case].clip(lower=0).sum()
-#                 gwh_reverse = abs(tran_flow_stress_agg[case].clip(upper=0).sum())
+                ### Head/tail length:
+                gwh_forward = tran_flow_stress_agg[case].clip(lower=0).sum()
+                gwh_reverse = abs(tran_flow_stress_agg[case].clip(upper=0).sum())
 
-#                 reversefrac = gwh_reverse / (gwh_reverse + gwh_forward)
-#                 forwardfrac = gwh_forward / (gwh_reverse + gwh_forward)
+                reversefrac = gwh_reverse / (gwh_reverse + gwh_forward)
+                forwardfrac = gwh_forward / (gwh_reverse + gwh_forward)
 
-#                 ### Plot it
-#                 for interface in interfaces:
-#                     r, rr = interface.split('|')
-#                     startx, starty = dfmap[ralevel].loc[r, ['x', 'y']]
-#                     endx, endy = dfmap[ralevel].loc[rr, ['x', 'y']]
+                ### Plot it
+                for interface in interfaces:
+                    r, rr = interface.split('|')
+                    startx, starty = dfmap[ralevel].loc[r, ['x', 'y']]
+                    endx, endy = dfmap[ralevel].loc[rr, ['x', 'y']]
 
-#                     plots.plot_segmented_arrow(
-#                         ax[coords[case]],
-#                         reversefrac=reversefrac[interface],
-#                         forwardfrac=forwardfrac[interface],
-#                         reversewidth=reversewidth[interface]*wscale,
-#                         forwardwidth=forwardwidth[interface]*wscale,
-#                         startx=startx, starty=starty, endx=endx, endy=endy,
-#                         forwardcolor=colors[case], reversecolor=whiteout[colors[case]],
-#                         alpha=0.8, headwidthfrac=1.5,
-#                     )
-#                 ### Scale
-#                 if scale:
-#                     (startx, starty, endx, endy) = (-2.0e6, -1.2e6, -1.5e6, -1.2e6)
-#                     yspan = ax[coords[case]].get_ylim()
-#                     yspan = yspan[1] - yspan[0]
-#                     plots.plot_segmented_arrow(
-#                         ax[coords[case]],
-#                         reversefrac=0, forwardfrac=1,
-#                         reversewidth=0, forwardwidth=scale*wscale,
-#                         startx=startx, starty=starty, endx=endx, endy=endy,
-#                         forwardcolor=colors[case], reversecolor=whiteout[colors[case]],
-#                         alpha=0.8, headwidthfrac=1.5,
-#                     )
-#                     ax[coords[case]].annotate(
-#                         f"{scale} GW\n{label}", ((startx+endx)/2, starty-(scale/2*wscale)-yspan*0.02),
-#                         ha='center', va='top', fontsize=14,
-#                     )
+                    plots.plot_segmented_arrow(
+                        ax[coords[case]],
+                        reversefrac=reversefrac[interface],
+                        forwardfrac=forwardfrac[interface],
+                        reversewidth=reversewidth[interface]*wscale,
+                        forwardwidth=forwardwidth[interface]*wscale,
+                        startx=startx, starty=starty, endx=endx, endy=endy,
+                        forwardcolor=colors[case], reversecolor=whiteout[colors[case]],
+                        alpha=0.8, headwidthfrac=1.5,
+                    )
+                ### Scale
+                if scale:
+                    (startx, starty, endx, endy) = (-2.0e6, -1.2e6, -1.5e6, -1.2e6)
+                    yspan = ax[coords[case]].get_ylim()
+                    yspan = yspan[1] - yspan[0]
+                    plots.plot_segmented_arrow(
+                        ax[coords[case]],
+                        reversefrac=0, forwardfrac=1,
+                        reversewidth=0, forwardwidth=scale*wscale,
+                        startx=startx, starty=starty, endx=endx, endy=endy,
+                        forwardcolor=colors[case], reversecolor=whiteout[colors[case]],
+                        alpha=0.8, headwidthfrac=1.5,
+                    )
+                    ax[coords[case]].annotate(
+                        f"{scale} GW\n{label}", ((startx+endx)/2, starty-(scale/2*wscale)-yspan*0.02),
+                        ha='center', va='top', fontsize=14,
+                    )
 
-#             ### Save it
-#             title = f'{ralevel} {label} RA flows'
-#             slide = reeds.report_utils.add_to_pptx(title, prs=prs)
-#             if interactive:
-#                 plt.show()
-#     except Exception:
-#         print(traceback.format_exc())
+            ### Save it
+            title = f'{ralevel} {label} RA flows'
+            slide = reeds.report_utils.add_to_pptx(title, prs=prs)
+            if interactive:
+                plt.show()
+    except Exception:
+        print(traceback.format_exc())
 
 
 #%%### Copy some premade single-case plots
@@ -2538,220 +2538,220 @@ for figname, width, height in [
             print(f'No outputs/figures/{figname}.png for {os.path.basename(cases[case])}')
 
 
-# #%%### Generation capacity maps
+#%%### Generation capacity maps
 
-# ### Shared data
-# try:
-#     base = cases[list(cases.keys())[0]]
-#     val_r = dictin_cap_r[basecase].r.unique()
-#     dfmap = reeds.io.get_dfmap(base)
-#     dfba = dfmap['r']
-#     dfstates = dfmap['st']
-#     if (len(cases) == 2) and (not forcemulti):
-#         for i_plot in maptechs.keys():
-#             plt.close()
-#             f,ax=plt.subplots(
-#                 1, 3, sharex=True, sharey=True, figsize=(14,8),
-#                 gridspec_kw={'wspace':-0.05, 'hspace':0.05},
-#                 dpi=150,
-#             )
+### Shared data
+try:
+    base = cases[list(cases.keys())[0]]
+    val_r = dictin_cap_r[basecase].r.unique()
+    dfmap = reeds.io.get_dfmap(base)
+    dfba = dfmap['r']
+    dfstates = dfmap['st']
+    if (len(cases) == 2) and (not forcemulti):
+        for i_plot in maptechs.keys():
+            plt.close()
+            f,ax=plt.subplots(
+                1, 3, sharex=True, sharey=True, figsize=(14,8),
+                gridspec_kw={'wspace':-0.05, 'hspace':0.05},
+                dpi=150,
+            )
 
-#             _,_,dfplot = reedsplots.plot_diff_maps(
-#                 val=mapdiff, i_plot=i_plot, titles = maptechs[i_plot],
-#                 year=lastyear, casebase=casebase, casecomp=casecomp,
-#                 plot='base', f=f, ax=ax[0],
-#                 cmap=cmocean.cm.rain,
-#             )
-#             ax[0].annotate(
-#                 casebase_name,
-#                 (0.1,1), xycoords='axes fraction', fontsize=10)
+            _,_,dfplot = reedsplots.plot_diff_maps(
+                val=mapdiff, i_plot=i_plot, titles = maptechs[i_plot],
+                year=lastyear, casebase=casebase, casecomp=casecomp,
+                plot='base', f=f, ax=ax[0],
+                cmap=cmocean.cm.rain,
+            )
+            ax[0].annotate(
+                casebase_name,
+                (0.1,1), xycoords='axes fraction', fontsize=10)
 
-#             _,_,dfplot = reedsplots.plot_diff_maps(
-#                 val=mapdiff, i_plot=i_plot, titles = maptechs[i_plot],
-#                 year=lastyear, casebase=casebase, casecomp=casecomp,
-#                 plot='comp', f=f, ax=ax[1],
-#                 cmap=cmocean.cm.rain,
-#             )
-#             ax[1].annotate(
-#                 casecomp_name,
-#                 (0.1,1), xycoords='axes fraction', fontsize=10)
+            _,_,dfplot = reedsplots.plot_diff_maps(
+                val=mapdiff, i_plot=i_plot, titles = maptechs[i_plot],
+                year=lastyear, casebase=casebase, casecomp=casecomp,
+                plot='comp', f=f, ax=ax[1],
+                cmap=cmocean.cm.rain,
+            )
+            ax[1].annotate(
+                casecomp_name,
+                (0.1,1), xycoords='axes fraction', fontsize=10)
 
-#             _,_,dfplot = reedsplots.plot_diff_maps(
-#                 val=mapdiff, i_plot=i_plot, titles = maptechs[i_plot],
-#                 year=lastyear, casebase=casebase, casecomp=casecomp,
-#                 plot='absdiff', f=f, ax=ax[2],
-#                 cmap=plt.cm.RdBu_r,
-#             )
-#             ax[2].annotate(
-#                 '{}\n– {}'.format(
-#                     casecomp_name,
-#                     casebase_name),
-#                 (0.1,1), xycoords='axes fraction', fontsize=10)
+            _,_,dfplot = reedsplots.plot_diff_maps(
+                val=mapdiff, i_plot=i_plot, titles = maptechs[i_plot],
+                year=lastyear, casebase=casebase, casecomp=casecomp,
+                plot='absdiff', f=f, ax=ax[2],
+                cmap=plt.cm.RdBu_r,
+            )
+            ax[2].annotate(
+                '{}\n– {}'.format(
+                    casecomp_name,
+                    casebase_name),
+                (0.1,1), xycoords='axes fraction', fontsize=10)
 
-#             reeds.report_utils.add_to_pptx(f'{i_plot} Capacity {lastyear} [GW]', prs=prs)
-#             if interactive:
-#                 plt.show()
-#     else:
-#         figwidth = SLIDE_WIDTH
-#         #### Absolute maps
-#         if (nrows == 1) or (ncols == 1):
-#             legendcoords = max(nrows, ncols) - 1
-#         elif (nrows-1, ncols-1) in coords.values():
-#             legendcoords = (nrows-1, ncols-1)
-#         else:
-#             legendcoords = (nrows-2, ncols-1)
+            reeds.report_utils.add_to_pptx(f'{i_plot} Capacity {lastyear} [GW]', prs=prs)
+            if interactive:
+                plt.show()
+    else:
+        figwidth = SLIDE_WIDTH
+        #### Absolute maps
+        if (nrows == 1) or (ncols == 1):
+            legendcoords = max(nrows, ncols) - 1
+        elif (nrows-1, ncols-1) in coords.values():
+            legendcoords = (nrows-1, ncols-1)
+        else:
+            legendcoords = (nrows-2, ncols-1)
 
-#         ### Set up plot
-#         for tech_type in maptechs.keys():
-#             ### Get limits
-#             vmin = 0.
-#             vmax = float(pd.concat({
-#                 case: dictin_cap_r[case].loc[
-#                     (dictin_cap_r[case].i.isin(maptechs[tech_type]))
-#                     & (dictin_cap_r[case].t.astype(int)==lastyear)
-#                 ].groupby('r').MW.sum()
-#                 for case in cases
-#             }).max()) / 1e3
-#             if np.isnan(vmax):
-#                 vmax = 0.
-#             if not vmax:
-#                 print(f'{tech_type} has zero capacity in {lastyear}, so skipping maps')
-#                 continue
-#             ### Set up plot
-#             plt.close()
-#             f,ax = plt.subplots(
-#                 nrows, ncols, figsize=(figwidth, SLIDE_HEIGHT),
-#                 gridspec_kw={'wspace':0.0,'hspace':-0.1},
-#             )
-#             ### Plot it
-#             for case in cases:
-#                 dfval = dictin_cap_r[case].loc[
-#                     (dictin_cap_r[case].i.isin(maptechs[tech_type]))
-#                     & (dictin_cap_r[case].t.astype(int)==lastyear)
-#                 ].groupby('r').MW.sum()
-#                 dfplot = dfba.copy()
-#                 dfplot['GW'] = (dfval / 1e3).fillna(0)
+        ### Set up plot
+        for tech_type in maptechs.keys():
+            ### Get limits
+            vmin = 0.
+            vmax = float(pd.concat({
+                case: dictin_cap_r[case].loc[
+                    (dictin_cap_r[case].i.isin(maptechs[tech_type]))
+                    & (dictin_cap_r[case].t.astype(int)==lastyear)
+                ].groupby('r').MW.sum()
+                for case in cases
+            }).max()) / 1e3
+            if np.isnan(vmax):
+                vmax = 0.
+            if not vmax:
+                print(f'{tech_type} has zero capacity in {lastyear}, so skipping maps')
+                continue
+            ### Set up plot
+            plt.close()
+            f,ax = plt.subplots(
+                nrows, ncols, figsize=(figwidth, SLIDE_HEIGHT),
+                gridspec_kw={'wspace':0.0,'hspace':-0.1},
+            )
+            ### Plot it
+            for case in cases:
+                dfval = dictin_cap_r[case].loc[
+                    (dictin_cap_r[case].i.isin(maptechs[tech_type]))
+                    & (dictin_cap_r[case].t.astype(int)==lastyear)
+                ].groupby('r').MW.sum()
+                dfplot = dfba.copy()
+                dfplot['GW'] = (dfval / 1e3).fillna(0)
 
-#                 ax[coords[case]].set_title(
-#                     case if nowrap else plots.wraptext(case, width=figwidth/ncols*0.9, fontsize=14)
-#                 )
-#                 dfba.plot(
-#                     ax=ax[coords[case]],
-#                     facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
-#                 dfstates.plot(
-#                     ax=ax[coords[case]],
-#                     facecolor='none', edgecolor='k', lw=0.2, zorder=10001)
-#                 dfplot.plot(
-#                     ax=ax[coords[case]], column='GW', cmap=cmap, vmin=vmin, vmax=vmax,
-#                     legend=False,
-#                 )
-#                 ## Legend
-#                 if coords[case] == legendcoords:
-#                     plots.addcolorbarhist(
-#                         f=f, ax0=ax[coords[case]], data=dfplot.GW.values,
-#                         title=f'{tech_type} {lastyear}\ncapacity [GW]', cmap=cmap, vmin=vmin, vmax=vmax,
-#                         orientation='horizontal', labelpad=2.25, histratio=0.,
-#                         cbarwidth=0.05, cbarheight=0.85,
-#                         cbarbottom=-0.05, cbarhoffset=0.,
-#                     )
+                ax[coords[case]].set_title(
+                    case if nowrap else plots.wraptext(case, width=figwidth/ncols*0.9, fontsize=14)
+                )
+                dfba.plot(
+                    ax=ax[coords[case]],
+                    facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
+                dfstates.plot(
+                    ax=ax[coords[case]],
+                    facecolor='none', edgecolor='k', lw=0.2, zorder=10001)
+                dfplot.plot(
+                    ax=ax[coords[case]], column='GW', cmap=cmap, vmin=vmin, vmax=vmax,
+                    legend=False,
+                )
+                ## Legend
+                if coords[case] == legendcoords:
+                    plots.addcolorbarhist(
+                        f=f, ax0=ax[coords[case]], data=dfplot.GW.values,
+                        title=f'{tech_type} {lastyear}\ncapacity [GW]', cmap=cmap, vmin=vmin, vmax=vmax,
+                        orientation='horizontal', labelpad=2.25, histratio=0.,
+                        cbarwidth=0.05, cbarheight=0.85,
+                        cbarbottom=-0.05, cbarhoffset=0.,
+                    )
 
-#             for row in range(nrows):
-#                 for col in range(ncols):
-#                     if nrows == 1:
-#                         ax[col].axis('off')
-#                     elif ncols == 1:
-#                         ax[row].axis('off')
-#                     else:
-#                         ax[row,col].axis('off')
-#             ### Save it
-#             slide = reeds.report_utils.add_to_pptx(f'{tech_type} Capacity {lastyear} [GW]', prs=prs)
-#             if interactive:
-#                 plt.show()
+            for row in range(nrows):
+                for col in range(ncols):
+                    if nrows == 1:
+                        ax[col].axis('off')
+                    elif ncols == 1:
+                        ax[row].axis('off')
+                    else:
+                        ax[row,col].axis('off')
+            ### Save it
+            slide = reeds.report_utils.add_to_pptx(f'{tech_type} Capacity {lastyear} [GW]', prs=prs)
+            if interactive:
+                plt.show()
 
-#         #### Difference maps
-#         ### Set up plot
-#         for tech_type in maptechs.keys():
-#             ### Get limits
-#             dfval = pd.concat({
-#                 case: dictin_cap_r[case].loc[
-#                     (dictin_cap_r[case].i.isin(maptechs[tech_type]))
-#                     & (dictin_cap_r[case].t.astype(int)==lastyear)
-#                 ].groupby('r').MW.sum()
-#                 for case in cases
-#             }, axis=1).fillna(0) / 1e3
-#             dfdiff = dfval.subtract(dfval[basecase], axis=0)
-#             ### Get colorbar limits
-#             absmax = dfval.stack().max()
-#             diffmax = dfdiff.unstack().abs().max()
+        #### Difference maps
+        ### Set up plot
+        for tech_type in maptechs.keys():
+            ### Get limits
+            dfval = pd.concat({
+                case: dictin_cap_r[case].loc[
+                    (dictin_cap_r[case].i.isin(maptechs[tech_type]))
+                    & (dictin_cap_r[case].t.astype(int)==lastyear)
+                ].groupby('r').MW.sum()
+                for case in cases
+            }, axis=1).fillna(0) / 1e3
+            dfdiff = dfval.subtract(dfval[basecase], axis=0)
+            ### Get colorbar limits
+            absmax = dfval.stack().max()
+            diffmax = dfdiff.unstack().abs().max()
 
-#             if np.isnan(absmax):
-#                 absmax = 0.
-#             if not absmax:
-#                 print(f'{tech_type} has zero capacity in {lastyear}, so skipping maps')
-#                 continue
-#             ### Set up plot
-#             plt.close()
-#             f,ax = plt.subplots(
-#                 nrows, ncols, figsize=(figwidth, SLIDE_HEIGHT),
-#                 gridspec_kw={'wspace':0.0,'hspace':-0.1},
-#             )
-#             ### Plot it
-#             for case in cases:
-#                 dfplot = dfba.copy()
-#                 dfplot['GW'] = dfval[case] if case == basecase else dfdiff[case]
+            if np.isnan(absmax):
+                absmax = 0.
+            if not absmax:
+                print(f'{tech_type} has zero capacity in {lastyear}, so skipping maps')
+                continue
+            ### Set up plot
+            plt.close()
+            f,ax = plt.subplots(
+                nrows, ncols, figsize=(figwidth, SLIDE_HEIGHT),
+                gridspec_kw={'wspace':0.0,'hspace':-0.1},
+            )
+            ### Plot it
+            for case in cases:
+                dfplot = dfba.copy()
+                dfplot['GW'] = dfval[case] if case == basecase else dfdiff[case]
 
-#                 ax[coords[case]].set_title(
-#                     case if nowrap else plots.wraptext(case, width=figwidth/ncols*0.9, fontsize=14)
-#                 )
-#                 dfba.plot(
-#                     ax=ax[coords[case]],
-#                     facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
-#                 dfstates.plot(
-#                     ax=ax[coords[case]],
-#                     facecolor='none', edgecolor='k', lw=0.2, zorder=10001)
-#                 dfplot.plot(
-#                     ax=ax[coords[case]], column='GW',
-#                     cmap=(cmap if case == basecase else cmap_diff),
-#                     vmin=(0 if case == basecase else -diffmax),
-#                     vmax=(absmax if case == basecase else diffmax),
-#                     legend=False,
-#                 )
-#                 ## Difference legend
-#                 if coords[case] == legendcoords:
-#                     plots.addcolorbarhist(
-#                         f=f, ax0=ax[coords[case]], data=dfplot.GW.values,
-#                         title=f'{tech_type} {lastyear}\ncapacity, difference\nfrom {basecase} [GW]',
-#                         cmap=(cmap if case == basecase else cmap_diff),
-#                         vmin=(0 if case == basecase else -diffmax),
-#                         vmax=(absmax if case == basecase else diffmax),
-#                         orientation='horizontal', labelpad=2.25, histratio=0.,
-#                         cbarwidth=0.05, cbarheight=0.85,
-#                         cbarbottom=-0.05, cbarhoffset=0.,
-#                     )
-#             ## Absolute legend
-#             plots.addcolorbarhist(
-#                 f=f, ax0=ax[coords[basecase]], data=dfval[basecase].values,
-#                 title=f'{tech_type} {lastyear}\ncapacity [GW]',
-#                 cmap=cmap, vmin=0, vmax=absmax,
-#                 orientation='horizontal', labelpad=2.25, histratio=0.,
-#                 cbarwidth=0.05, cbarheight=0.85,
-#                 cbarbottom=-0.05, cbarhoffset=0.,
-#             )
+                ax[coords[case]].set_title(
+                    case if nowrap else plots.wraptext(case, width=figwidth/ncols*0.9, fontsize=14)
+                )
+                dfba.plot(
+                    ax=ax[coords[case]],
+                    facecolor='none', edgecolor='k', lw=0.1, zorder=10000)
+                dfstates.plot(
+                    ax=ax[coords[case]],
+                    facecolor='none', edgecolor='k', lw=0.2, zorder=10001)
+                dfplot.plot(
+                    ax=ax[coords[case]], column='GW',
+                    cmap=(cmap if case == basecase else cmap_diff),
+                    vmin=(0 if case == basecase else -diffmax),
+                    vmax=(absmax if case == basecase else diffmax),
+                    legend=False,
+                )
+                ## Difference legend
+                if coords[case] == legendcoords:
+                    plots.addcolorbarhist(
+                        f=f, ax0=ax[coords[case]], data=dfplot.GW.values,
+                        title=f'{tech_type} {lastyear}\ncapacity, difference\nfrom {basecase} [GW]',
+                        cmap=(cmap if case == basecase else cmap_diff),
+                        vmin=(0 if case == basecase else -diffmax),
+                        vmax=(absmax if case == basecase else diffmax),
+                        orientation='horizontal', labelpad=2.25, histratio=0.,
+                        cbarwidth=0.05, cbarheight=0.85,
+                        cbarbottom=-0.05, cbarhoffset=0.,
+                    )
+            ## Absolute legend
+            plots.addcolorbarhist(
+                f=f, ax0=ax[coords[basecase]], data=dfval[basecase].values,
+                title=f'{tech_type} {lastyear}\ncapacity [GW]',
+                cmap=cmap, vmin=0, vmax=absmax,
+                orientation='horizontal', labelpad=2.25, histratio=0.,
+                cbarwidth=0.05, cbarheight=0.85,
+                cbarbottom=-0.05, cbarhoffset=0.,
+            )
 
-#             for row in range(nrows):
-#                 for col in range(ncols):
-#                     if nrows == 1:
-#                         ax[col].axis('off')
-#                     elif ncols == 1:
-#                         ax[row].axis('off')
-#                     else:
-#                         ax[row,col].axis('off')
-#             ### Save it
-#             slide = reeds.report_utils.add_to_pptx(f'Difference: {tech_type} Capacity {lastyear} [GW]', prs=prs)
-#             if interactive:
-#                 plt.show()
-# except Exception:
-#     print(traceback.format_exc())
+            for row in range(nrows):
+                for col in range(ncols):
+                    if nrows == 1:
+                        ax[col].axis('off')
+                    elif ncols == 1:
+                        ax[row].axis('off')
+                    else:
+                        ax[row,col].axis('off')
+            ### Save it
+            slide = reeds.report_utils.add_to_pptx(f'Difference: {tech_type} Capacity {lastyear} [GW]', prs=prs)
+            if interactive:
+                plt.show()
+except Exception:
+    print(traceback.format_exc())
 
 #%% Save the powerpoint file
 prs.save(savename)
