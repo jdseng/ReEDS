@@ -4131,12 +4131,22 @@ def plot_stressperiod_evolution(
     Only the first /-delimited level_threshold pair is used.
     """
     from reeds.resource_adequacy import stress_periods
+    ### Fixed inputs
+    ylabel = {
+        'neue': 'NEUE [ppm]',
+        'lolh': 'LOLH [event-hours/year]',
+        'lole': 'LOLE [events/year]',
+        'lold': 'LOLD [event-days/year]',
+        'duration': 'Duration [hours]',
+        'depth': 'Depth [% of peak]',
+    }
+    scale = {'depth':100}
     ### Parse inputs
     sw = reeds.io.get_switches(case)
     switch = stress_periods.RA_SWITCHES[metric.lower()]
     switch_metric = stress_periods.SWITCH_METRIC[metric.lower()]
     level, threshold = sw[switch].split('/')[0].split('_')
-    threshold = float(threshold)
+    threshold = float(threshold) * scale.get(metric, 1)
     ### Load RA results
     infiles = sorted(glob(os.path.join(case,'outputs','ra_metrics_*.csv')))
     dictin_ra = {
@@ -4150,19 +4160,10 @@ def plot_stressperiod_evolution(
         .xs(level,0,'level')
         .xs(switch_metric,0,'metric')
         .squeeze(1).unstack('region')
-    )
+    ) * scale.get(metric, 1)
     ### Load stress periods for labels
     dfstress = get_stressperiods(case)
     ### Plot setup
-    ylabel = {
-        'neue': 'NEUE [ppm]',
-        'lolh': 'LOLH [event-hours/year]',
-        'lole': 'LOLE [events/year]',
-        'lold': 'LOLD [event-days/year]',
-        'duration': 'Duration [hours]',
-        'depth': 'Depth [% of peak]',
-    }
-    scale = {'depth':100}
     years = [
         y for y in dfplot.index.get_level_values('year').unique()
         if y >= int(sw.GSw_StartMarkets)
@@ -4181,7 +4182,7 @@ def plot_stressperiod_evolution(
         gridspec_kw=gridspec_kw,
     )
     for col, year in enumerate(years):
-        df = dfplot.loc[year] * scale.get(metric, 1)
+        df = dfplot.loc[year]
         for region in regions:
             ax[col].plot(
                 df.index, df[region],
@@ -4213,7 +4214,7 @@ def plot_stressperiod_evolution(
         handletextpad=0.3, handlelength=0.7,
     )
     ax[0].set_ylabel(ylabel[metric])
-    ax[0].set_ylim(0)
+    ax[0].set_ylim(0, min(ax[0].get_ylim()[1], threshold*50))
     plots.despine(ax)
 
     return f,ax
@@ -6616,9 +6617,12 @@ def plot_eue_events(
                 )
                 if showhull and len(points['x']) >= 3:
                     dfpoints = pd.DataFrame(points)
-                    hull = scipy.spatial.ConvexHull(dfpoints)
-                    dfhull = dfpoints.loc[hull.vertices]
-                    _ax.fill(dfhull.x, dfhull.y, color='C3', lw=0, alpha=0.3, zorder=-1)
+                    try:
+                        hull = scipy.spatial.ConvexHull(dfpoints)
+                        dfhull = dfpoints.loc[hull.vertices]
+                        _ax.fill(dfhull.x, dfhull.y, color='C3', lw=0, alpha=0.3, zorder=-1)
+                    except Exception as err:
+                        print(err)
             ## Formatting
             if iteration == 0:
                 _ax.set_title(region.replace('_','\n'), weight='bold')
