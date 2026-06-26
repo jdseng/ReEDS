@@ -4121,32 +4121,48 @@ def plot_stressperiod_days(case, repcolor='k', sharey=False, figsize=(10,5)):
 
 
 def plot_stressperiod_evolution(
-        case, level=None, threshold=None,
+        case,
+        metric:Literal['neue','depth','duration','lolh','lole','lold']='neue',
         figsize=None, scale_widths=False,
     ):
-    """Plot NEUE by year and stress period iteration"""
+    """
+    Plot RA metric by year and stress period iteration.
+    RA metric thresholds are included in the plot even if they are not applied.
+    Only the first /-delimited level_threshold pair is used.
+    """
+    from reeds.resource_adequacy import stress_periods
     ### Parse inputs
     sw = reeds.io.get_switches(case)
-    _level, _threshold = sw['GSw_PRM_StressThresholdNEUE'].split('/')[0].split('_')
-    level = _level if level is None else level
-    threshold = float(_threshold) if threshold is None else threshold
-    ### Load NEUE results
+    switch = stress_periods.RA_SWITCHES[metric.lower()]
+    switch_metric = stress_periods.SWITCH_METRIC[metric.lower()]
+    level, threshold = sw[switch].split('/')[0].split('_')
+    threshold = float(threshold)
+    ### Load RA results
     infiles = sorted(glob(os.path.join(case,'outputs','ra_metrics_*.csv')))
-    dictin_neue = {
+    dictin_ra = {
         tuple([int(x) for x in os.path.basename(f)[len('ra_metrics_'):-len('.csv')].split('i')]):
         pd.read_csv(f, index_col=['level','metric','region'])
         for f in infiles
     }
     ## Reshape to (year,iteration) x (region)
     dfplot = (
-        pd.concat(dictin_neue, names=['year','iteration'])
+        pd.concat(dictin_ra, names=['year','iteration'])
         .xs(level,0,'level')
-        .xs('neue_ppm',0,'metric')
+        .xs(switch_metric,0,'metric')
         .squeeze(1).unstack('region')
     )
     ### Load stress periods for labels
     dfstress = get_stressperiods(case)
     ### Plot setup
+    ylabel = {
+        'neue': 'NEUE [ppm]',
+        'lolh': 'LOLH [event-hours/year]',
+        'lole': 'LOLE [events/year]',
+        'lold': 'LOLD [event-days/year]',
+        'duration': 'Duration [hours]',
+        'depth': 'Depth [% of peak]',
+    }
+    scale = {'depth':100}
     years = [
         y for y in dfplot.index.get_level_values('year').unique()
         if y >= int(sw.GSw_StartMarkets)
@@ -4165,7 +4181,7 @@ def plot_stressperiod_evolution(
         gridspec_kw=gridspec_kw,
     )
     for col, year in enumerate(years):
-        df = dfplot.loc[year]
+        df = dfplot.loc[year] * scale.get(metric, 1)
         for region in regions:
             ax[col].plot(
                 df.index, df[region],
@@ -4196,7 +4212,7 @@ def plot_stressperiod_evolution(
         loc='upper left', bbox_to_anchor=(1,1), frameon=False,
         handletextpad=0.3, handlelength=0.7,
     )
-    ax[0].set_ylabel('NEUE [ppm]')
+    ax[0].set_ylabel(ylabel[metric])
     ax[0].set_ylim(0)
     plots.despine(ax)
 
@@ -4204,7 +4220,7 @@ def plot_stressperiod_evolution(
 
 
 def plot_ra_metrics_bylevel(
-    case, tmin=2023,
+    case, tmin=2026,
     levels=['country','interconnect','transreg','transgrp'],
     metrics=[
         'neue',
@@ -4244,7 +4260,7 @@ def plot_ra_metrics_bylevel(
                 .set_index(['level','metric','region']).squeeze(1)
             )
     dfin_ra = pd.concat(ra_metrics, axis=0, names=['year']).unstack('year')
-    dfin_ra = dfin_ra[[c for c in dfin_ra if int(c) >= 2025]].copy()
+    dfin_ra = dfin_ra[[c for c in dfin_ra if int(c) >= tmin]].copy()
     if onlydata:
         return dfin_ra
     ### Plot settings
@@ -6542,7 +6558,8 @@ def plot_eue_events(
     case, year=None, level='transgrp',
     xval:Literal['timesteps','mean','max','sum']='timesteps',
     yval:Literal['timesteps','mean','max','sum']='mean',
-    scale=1, alpha=0.7,
+    scale=1, alpha=0.9,
+    showhull=True,
 ):
     """
     Plot event metrics against each other for all regions in specified level (columns)
@@ -6553,18 +6570,30 @@ def plot_eue_events(
     regions = dflevel.bounds.minx.sort_values().index
     year = int(sw.endyear) if not year else year
     iterations = get_stressperiods(case).loc[year].index.get_level_values('iteration').unique()
-    units = {'timesteps':'hours', 'mean':'MW', 'max':'MW', 'sum':'MWh'}
-
+    units = {'timesteps':'hours', 'mean':'%', 'max':'%', 'sum':'MWh'}
+    if showhull:
+        import scipy.spatial
+    ## Get load if we need it for normalization
+    peakload = (
+        pd.read_csv(Path(case,'inputs_case','peakload.csv'), index_col=['level','region'])
+        .loc[level][str(year)]
+    )
+    ## Get thresholds
+    thresholds = {}
+    if level in sw.GSw_PRM_StressThresholdDuration:
+        thresholds['timesteps'] = int(sw.GSw_PRM_StressThresholdDuration.split('/')[0].split('_')[-1])
+    if level in sw.GSw_PRM_StressThresholdDepth:
+        thresholds['max'] = float(sw.GSw_PRM_StressThresholdDepth.split('/')[0].split('_')[-1]) * 100
+    ## Plot it
     nrows, ncols, coords = layout_subplots(
         row_list=iterations, col_list=regions,
         oneaxis=('columns' if len(regions) > 1 else 'rows'),
     )
     dictout = {}
-
     plt.close()
     f,ax = plt.subplots(
         nrows, ncols, figsize=(scale*ncols, scale*nrows),
-        sharex=True, sharey='col',
+        sharex=True, sharey=True,
     )
     for iteration in iterations:
         ## Get events
@@ -6575,17 +6604,45 @@ def plot_eue_events(
         ## Plot for each region and iteration
         for region in regions:
             _ax = ax[coords[iteration, region]] if nrows + ncols > 2 else ax
-            _ax.plot(
-                events[xval], events[yval], lw=0, alpha=alpha,
-                marker='o', markersize=3, markeredgewidth=0, color='C3',
-            )
+            if region in events.index.get_level_values('region'):
+                points = {'x':events.loc[region][xval], 'y':events.loc[region][yval]}
+                if xval in ['max', 'mean']:
+                    points['x'] = points['x'] / peakload[region] * 100
+                if yval in ['max', 'mean']:
+                    points['y'] = points['y'] / peakload[region] * 100
+                _ax.plot(
+                    points['x'], points['y'], lw=0, alpha=alpha,
+                    marker='o', markersize=3, markeredgewidth=0, color='C3',
+                )
+                if showhull and len(points['x']) >= 3:
+                    dfpoints = pd.DataFrame(points)
+                    hull = scipy.spatial.ConvexHull(dfpoints)
+                    dfhull = dfpoints.loc[hull.vertices]
+                    _ax.fill(dfhull.x, dfhull.y, color='C3', lw=0, alpha=0.3, zorder=-1)
             ## Formatting
             if iteration == 0:
-                _ax.set_title(region, weight='bold')
-            if iteration == max(iterations):
-                if region == regions[0]:
-                    _ax.set_ylabel(f'EUE {yval} ({units[yval]})', y=0, ha='left')
-                    _ax.set_xlabel(f'EUE {xval} ({units[xval]})', x=0, ha='left')
+                _ax.set_title(region.replace('_','\n'), weight='bold')
+            if region == regions[0]:
+                _ax.annotate(
+                    f'{year}i{iteration}',
+                    (0, 1), xycoords='axes fraction',
+                    xytext=(3,-3), textcoords='offset points',
+                    ha='left', va='top', fontsize=12,
+                    path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.8)],
+                )
+                if iteration == max(iterations):
+                    _ax.set_ylabel(f'EUE {yval} [{units[yval]}]', y=0, ha='left')
+                    _ax.set_xlabel(f'EUE {xval} [{units[xval]}]', x=0, ha='left')
+    ## Formatting
+    _ax.set_xlim(0, _ax.get_xlim()[1])
+    _ax.set_ylim(0, _ax.get_ylim()[1])
+    for iteration in iterations:
+        for region in regions:
+            _ax = ax[coords[iteration, region]] if nrows + ncols > 2 else ax
+            if xval in thresholds:
+                _ax.axvline(thresholds[xval], c='k', ls=':', lw=0.75)
+            if yval in thresholds:
+                _ax.axhline(thresholds[yval], c='k', ls=':', lw=0.75)
     reeds.plots.despine(ax)
     return f, ax, dictout
 

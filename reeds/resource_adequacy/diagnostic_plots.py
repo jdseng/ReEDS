@@ -1030,6 +1030,9 @@ def map_pras_failure_rate(sw, dfs, aggfunc='mean', repair=False):
 
 def map_outagerate_new_stressperiods(sw, dfs):
     new_stress_periods = dfs['new_stress_periods']
+    if not len(new_stress_periods):
+        print('No new stress periods to plot')
+        return
     dates = (
         new_stress_periods
         .period.map(reeds.timeseries.h2timestamp)

@@ -739,16 +739,16 @@ if not int(sw.GSw_PRM_CapCredit):
         print(traceback.format_exc())
 
     try:
-        level, threshold = sw['GSw_PRM_StressThresholdNEUE'].split('/')[0].split('_')
-        plt.close()
-        f,ax = reedsplots.plot_stressperiod_evolution(case=case, level=level)
-        savename = f'plot_stressperiod_evolution-neue-{level}.png'
-        if write:
-            plt.savefig(os.path.join(savepath, savename))
-        if interactive:
-            plt.show()
-        plt.close()
-        print(savename)
+        for metric in ['neue','depth','duration','lolh','lole','lold']:
+            plt.close()
+            f,ax = reedsplots.plot_stressperiod_evolution(case=case, metric=metric)
+            savename = f'plot_stressperiod_evolution-{metric}.png'
+            if write:
+                plt.savefig(os.path.join(savepath, savename))
+            if interactive:
+                plt.show()
+            plt.close()
+            print(savename)
     except Exception:
         print('plot_stressperiod_evolution failed:')
         print(traceback.format_exc())
