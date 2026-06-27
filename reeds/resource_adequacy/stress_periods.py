@@ -273,11 +273,15 @@ def get_longest_events(
             pd.Series(index=pd.date_range(row.start, row.end, freq='H'), data=1)
             .resample('D').count()
         )
-    metric_period = pd.concat(dates)
-    metric_period.index = metric_period.index.map(
-        lambda x: reeds.timeseries.timestamp2h(x, sw.GSw_HourlyType).split('h')[0]
-    )
-    return metric_period.groupby(level=0).sum()
+    if len(dates):
+        metric_period = pd.concat(dates)
+        metric_period.index = metric_period.index.map(
+            lambda x: reeds.timeseries.timestamp2h(x, sw.GSw_HourlyType).split('h')[0]
+        )
+        metric_period = metric_period.groupby(level=0).sum()
+    else:
+        metric_period = pd.Series(dtype=int)
+    return metric_period
 
 
 def get_shoulder_periods(sw, criterion, dfenergy_agg, high_stress_periods):
