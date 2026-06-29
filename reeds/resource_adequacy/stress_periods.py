@@ -565,7 +565,7 @@ def get_stress_periods(case, sw, t, iteration):
         print('New stress periods after dropping duplicates:')
         print(new_stress_periods)
     else:
-        return {}, {}, {}
+        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     ## Reproduce the format of inputs_case/stress_period_szn.csv
     p = 'w' if sw.GSw_HourlyType == 'wek' else 'd'
