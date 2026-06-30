@@ -105,7 +105,13 @@ Image of Anaconda Install Mac - Customize Installation Type
 
 **To validate Python was installed properly** execute the following command from a new terminal (without quotes): "python"
 
-Python should initiate, looking similar to {numref}`figure-python-test`.
+Python should initiate ({numref}`figure-python-test2`).
+
+```{figure} figs/readme/py-test.png
+:name: figure-python-test2
+
+Screenshot of a test of Python in the terminal window
+```
 
 ````
 `````
