@@ -321,6 +321,15 @@ def check_compatibility(sw):
                     f"but '{stress_value}' was provided"
                 )
 
+    ### GSw_PRM_UpdateMethod 1-3 (static or PRAS-informed PRM update) is computed from the
+    ### NEUE-based shortfall, so it requires NEUE to be an active stress metric
+    if int(sw['GSw_PRM_UpdateMethod']) in [1, 2, 3] and 'neue' not in used_metrics:
+        raise ValueError(
+            f"GSw_PRM_UpdateMethod={sw['GSw_PRM_UpdateMethod']} requires 'NEUE' to be included "
+            f"in GSw_PRM_StressThresholdMetrics (={sw['GSw_PRM_StressThresholdMetrics']}), "
+            "since PRM updates are computed from the NEUE-based shortfall."
+        )
+
     if sw['GSw_PRM_StressStorageCutoff'].lower() not in ['off','0','false']:
         metric, value = sw['GSw_PRM_StressStorageCutoff'].split('_')
         if metric.lower()[:3] not in ['eue', 'cap', 'abs']:
