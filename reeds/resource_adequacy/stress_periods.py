@@ -124,9 +124,7 @@ def calc_lole(dflole_agg, threshold=0):
 
 
 def calc_lolh(dflole_agg):
-    """Event-hours, where an event-hour is >threshold LOLE"""
-    ## Get the loss-of-load events, keeping the max hourly probability for each
-    ## (not really right probabilistically)
+    """Event-hours, given by the sum of hourly LOLP across hours"""
     lolh = dflole_agg.sum()
     return lolh
 
