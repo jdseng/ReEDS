@@ -6237,8 +6237,6 @@ def map_stressors(
         names=['i','r'],
     )
 
-    load = reeds.io.read_file(ra_files['load'], parse_timestamps=True)
-
     recf = reeds.io.read_file(
         os.path.join(case, 'inputs_case', 'recf.h5'),
         parse_timestamps=True,
@@ -6247,6 +6245,8 @@ def map_stressors(
         recf.columns.map(lambda x: tuple(x.split('|'))),
         names=['i','r'],
     )
+
+    load = reeds.io.read_file(ra_files['load'], parse_timestamps=True).tz_convert(recf.index.tz)
 
     temperatures = reeds.io.get_temperatures(case)
     hierarchy = reeds.io.get_hierarchy(case)
@@ -6286,7 +6286,7 @@ def map_stressors(
     vre_gen_region = {
         (tech, region):
         (
-            vre_gen[tech][region2rs[region]].sum(axis=1)
+            vre_gen[tech].reindex(region2rs[region], axis=1).fillna(0.).sum(axis=1)
             .groupby([vre_gen.index.year, vre_gen.index.month, vre_gen.index.day])
             .sum()
             .sort_values()
@@ -6329,17 +6329,17 @@ def map_stressors(
     nrows, ncols = 3, 4
     vmin = {
         'load': (pd.concat(load_region, axis=1).min() / pd.concat(load_region, axis=1).max()).min(),
-        'wind-ons': 0,
-        'upv': 0,
+        'wind-ons': 0.,
+        'upv': 0.,
         'temperature': reeds.units.c2f(-20),
-        'outage': 0,
+        'outage': 0.,
     }
     vmax = {
-        'load': 1,
+        'load': 1.,
         'wind-ons': 0.8,
         'upv': 0.5,
         'temperature': reeds.units.c2f(40),
-        'outage': 40,
+        'outage': 40.,
     }
 
     ### Get the days to run

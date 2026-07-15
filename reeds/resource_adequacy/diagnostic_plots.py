@@ -1223,7 +1223,7 @@ def plot_stressors(sw, dfs):
             try:
                 f, ax, df, plotlabel = next(plot_generator)
                 savename = (
-                    f"stress{t}i{iteration}-"
+                    f"stress{sw.t}i{sw.iteration}-"
                     + plotlabel.split(':')[0].replace('-','')
                 )
                 if savefig:
