@@ -389,23 +389,24 @@ def map_dropped_load(sw, dfs, level='r'):
     dropped = dfs['pras'][
         [c for c in dfs['pras'] if c.endswith('_EUE') and (not c.startswith('USA'))]
     ].copy()
-    dropped.columns = dropped.columns.map(lambda x: x.split('_')[0])
+    dropped.columns = dropped.columns.map(lambda x: x[:-len('_EUE')])
     units = {
         ('EUE','max'): ('MW',1), ('EUE','mean'): ('MW',1), ('EUE','sum'): ('GWh',1e-3),
         ('NEUE','max'): ('%',1e2), ('NEUE','sum'): ('ppm',1e6),
     }
     load = dfs['pras_load']
+    rmap = reeds.io.get_rmap(sw['casedir'], level)
 
     ### Plot it
     for metric in ['EUE','NEUE']:
         ## Aggregate if necessary
         if level not in ['r','rb','ba']:
             dropped = (
-                dropped.rename(columns=dfs['hierarchy'][level])
+                dropped.rename(columns=rmap)
                 .groupby(level=0, axis=1).sum().copy()
             )
             load = (
-                load.rename(columns=dfs['hierarchy'][level])
+                load.rename(columns=rmap)
                 .groupby(level=0, axis=1).sum().copy()
             )
         for agg in ['max','sum','mean']:
@@ -415,7 +416,7 @@ def map_dropped_load(sw, dfs, level='r'):
 
             dfplot = dfba.copy()
             if level not in ['r','rb','ba']:
-                dfplot[level] = dfs['hierarchy'][level]
+                dfplot[level] = dfplot.index.map(rmap)
                 dfplot = dfplot.dissolve(level)
                 dfplot['centroid_x'] = dfplot.geometry.centroid.x
                 dfplot['centroid_y'] = dfplot.geometry.centroid.y
@@ -1361,8 +1362,8 @@ if __name__ == '__main__':
 
     # #%%### Inputs for debugging
     # reeds_path = reeds.io.reeds_path
-    # casedir = os.path.join(reeds_path, 'runs', 'v20251111_15M0_Pacific')
-    # t = 2026
+    # casedir = os.path.join(reeds_path, 'runs', 'v20260715_stressM2_MultiMetricRA')
+    # t = 2050
     # interactive = True
     # iteration = 0
     # debug = True
