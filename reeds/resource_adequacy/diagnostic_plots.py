@@ -1042,7 +1042,7 @@ def map_outagerate_new_stressperiods(sw, dfs):
     vmax = {'forced': 40, 'scheduled': 25, 'both': 50}
     aggfunc = 'max'
     for outage_type in vmax:
-        savename = f'map-outage_{outage_type}_{aggfunc}-{t}i{iteration}.png'
+        savename = f'map-outage_{outage_type}_{aggfunc}-{sw.t}i{sw.iteration}.png'
         plt.close()
         f, ax, _ = reeds.reedsplots.map_outage_days(
             sw.casedir,
