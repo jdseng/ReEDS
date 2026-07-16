@@ -7,6 +7,7 @@ import shapely
 import datetime
 import numpy as np
 import pandas as pd
+from pathlib import Path
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import patheffects as pe
@@ -328,21 +329,30 @@ offshore = offshore_zones.index.values
 dfzones = pd.concat([dfmap['r'], offshore_zones])
 
 ### Get transmission links
+case = Path(reeds.io.reeds_path,'runs','v20260713_ilM0_USA_defaults')
 trans_files = {
-    'init_ac': 'transmission_capacity_init_AC_ba_NARIS2024.csv',
-    'init_nonac': 'transmission_capacity_init_nonAC_ba.csv',
-    'fut': 'transmission_capacity_future_ba_baseline.csv',
+    'init': Path(case, 'inputs_case', 'trancap_init_energy.csv'),
+    'fut': Path(case, 'inputs_case', 'trancap_fut.csv'),
 }
-trans_links = {
-    key:
-    pd.read_csv(
-        os.path.join(
-            reeds.io.reeds_path, 'inputs', 'transmission', trans_files[key],
-        ),
+trans_links = pd.concat({
+    key: pd.read_csv(
+        Path(reeds.io.reeds_path, 'inputs', 'transmission', trans_files[key]),
         comment='#',
-    )
+    ).rename(columns={'*r':'r'})
     for key in trans_files
-}
+}, axis=0)
+## Avoid overlaps
+ls = {('AZ_S','NM_W','VSC'): '--'}
+
+sw = reeds.io.get_switches()
+newlinks_offshore = pd.concat([
+    pd.read_csv(
+        Path(reeds.io.reeds_path, 'inputs', 'zones', sw.GSw_ZoneSet, 'newlinks_offshore_radial.csv')
+    ),
+    pd.read_csv(
+        Path(reeds.io.reeds_path, 'inputs', 'transmission', 'newlinks_offshore_backbone.csv')
+    ),
+])
 
 ### Get interconnection seams
 seam_buffer = 5000
@@ -356,7 +366,7 @@ seams = gpd.GeoSeries([
 onshore_colors = mapclassify.greedy(dfmap['r'], strategy='smallest_last')
 offshore_colors = mapclassify.greedy(offshore_zones, strategy='smallest_last')
 
-### Set up the plot
+#%% Set up the plot
 alpha_zones_min = 0.15
 alpha_zones_mult = 0.05
 lw_zones = 0.3
@@ -374,6 +384,7 @@ prefix = 'centroid_'
 prefix = ''
 fontsize = 0
 fontsize = 7
+label_land = False
 
 ### Plot it
 plt.close()
@@ -395,9 +406,13 @@ for r, row in dfmap['r'].iterrows():
         ax=ax, facecolor=colors['land'], lw=0,
         alpha=alpha_zones_min+alpha_zones_mult*onshore_colors[r],
     )
-    if fontsize:
+    if label_land:
+        x, y = (
+            np.array([row.geometry.centroid.x, row.geometry.centroid.y])
+            + np.array(offset.get('r', {}).get(r, (0,0)))
+        )
         ax.annotate(
-            r, (row['centroid_x'], row['centroid_y']), ha='center', va='center',
+            r, (x, y), ha='center', va='center',
             color='k', fontsize=fontsize, zorder=1e10,
             path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=0.75)],
         )
@@ -405,23 +420,18 @@ offshore_zones.plot(ax=ax, facecolor='none', edgecolor=colors['offshore'], lw=lw
 dfmap['r'].plot(ax=ax, facecolor='none', edgecolor=colors['land'], lw=lw_zones, zorder=1e6)
 seams.plot(ax=ax, facecolor='k', edgecolor='w', lw=0.6, zorder=1.1e6)
 ## Links
-for i, row in trans_links['init_ac'].iterrows():
+for i, row in trans_links.iterrows():
     ax.plot(
         [dfmap['r'].loc[row.r, f'{prefix}x'], dfmap['r'].loc[row.rr, f'{prefix}x']],
         [dfmap['r'].loc[row.r, f'{prefix}y'], dfmap['r'].loc[row.rr, f'{prefix}y']],
-        color=colors['AC'], lw=lw_lines, zorder=1e7,
+        color=colors[row['trtype']], lw=lw_lines, zorder=1e7,
+        ls=ls.get((row.r,row.rr,row.trtype), ls.get((row.rr,row.r,row.trtype), '-')),
     )
-for i, row in trans_links['init_nonac'].iterrows():
-    ax.plot(
-        [dfmap['r'].loc[row.r, f'{prefix}x'], dfmap['r'].loc[row.rr, f'{prefix}x']],
-        [dfmap['r'].loc[row.r, f'{prefix}y'], dfmap['r'].loc[row.rr, f'{prefix}y']],
-        color=colors[row['trtype']], lw=lw_lines, zorder=1e8,
-    )
-for i, row in trans_links['fut'].iterrows():
+for i, row in newlinks_offshore.iterrows():
     ax.plot(
         [dfzones.loc[row.r, f'{prefix}x'], dfzones.loc[row.rr, f'{prefix}x']],
         [dfzones.loc[row.r, f'{prefix}y'], dfzones.loc[row.rr, f'{prefix}y']],
-        color=colors[row['trtype']], lw=lw_lines, zorder=1e9,
+        color=colors['VSC'], lw=lw_lines, zorder=1e9,
         alpha=(0.4 if (row.r in offshore and row.rr in offshore) else 1),
     )
 ## Legend
@@ -437,10 +447,10 @@ ax.legend(
 
 ## Formatting
 ax.axis('off')
-savepath = os.path.join(
+figpath = os.path.join(
     reeds.io.reeds_path, 'docs', 'source', 'figs', 'docs',
     'transmission-offshore.png'
 )
-plt.savefig(savepath)
+plt.savefig(figpath)
 if interactive:
     plt.show()
