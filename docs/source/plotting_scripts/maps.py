@@ -152,12 +152,29 @@ cmap = {
 }
 
 offset = {
+    'r': {
+        'MO_SE': (0,-1.5e5),
+        'MO_SPP': (0,0.5e5),
+        'MO_MISO': (0,-0.1e5),
+        'NY_LI': (1e5,0),
+        'NY_NYC': (1.5e5,-0.5e5),
+        'ND_MISO': (0,0.5e5),
+        'ND_SPP': (0,-0.5e5),
+        'AR_SPP': (0,1e5),
+        'TX_N': (0,-0.5e5),
+        'NY_W': (-0.8e5,-0.8e5),
+        'VA_W': (0,-0.5e5),
+        'NJ': (0,-0.5e5),
+        'IL_MISO': (0,-0.2e5),
+        'CA_SE': (0,-0.2e5),
+        'FL_S': (-0.1e5,0.1e5),
+    },
     'transreg': {
         'WestConnect': (0,-1e5),
     },
     'transgrp': {
-        'MISO_Central': (-1e5,-2e5),
-        'SPP_North': (1e5,0),
+        'MISO_Central': (1e5,-1e5),
+        'SPP_North': (0,0),
         'CAISO': (-0.1e5,-0.5e5),
         'NorthernGrid_East': (0,-1e5),
         'WestConnect_North': (0,-1e5),
@@ -215,19 +232,28 @@ for level in dfmap:
                 np.array([row.geometry.centroid.x, row.geometry.centroid.y])
                 + np.array(offset.get(level, {}).get(r, (0,0)))
             )
-            ax.annotate(
-                r.replace('_','\n'),
-                (x, y),
-                ha='center', va='center', weight='bold',
-                size={'r':7, 'hurdlereg':7, 'st':10}.get(level,11),
-                color='k', zorder=1e11,
-                path_effects=[pe.withStroke(linewidth=1.5, foreground='w', alpha=1)]
-            )
+            for i, (c, a) in enumerate([('k',1), (colors[r], 0.6)]):
+                if i == 1 and level != 'r':
+                    continue
+                ax.annotate(
+                    (r if level == 'r' else r.replace('_','\n')),
+                    (x, y),
+                    ha='center', va='center', weight='bold',
+                    size={'r':7, 'hurdlereg':7, 'st':10}.get(level,11),
+                    color=c, zorder=1e11+i, alpha=a,
+                    path_effects=(
+                        [pe.withStroke(linewidth=1.5, foreground='w', alpha=(1 if i == 0 else 0))]
+                    ),
+                )
     if label_zones.get(level, True):
         for r, row in dfmap['r'].iterrows():
+            x, y = (
+                np.array([row.geometry.centroid.x, row.geometry.centroid.y])
+                + np.array(offset.get('r', {}).get(r, (0,0)))
+            )
             ax.annotate(
                 r,
-                (row.geometry.centroid.x, row.geometry.centroid.y),
+                (x, y),
                 ha='center', va='center', size=6, weight='normal',
                 color='C7', zorder=1e10,
                 path_effects=[pe.withStroke(linewidth=0.7, foreground='w', alpha=1)]
@@ -245,7 +271,7 @@ for level in dfmap:
     )
     plt.savefig(
         os.path.join(savepath, savename+'.png'),
-        transparent=True,
+        transparent=True, dpi=600,
         bbox_inches='tight',
     )
     plt.show()
