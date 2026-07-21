@@ -1286,6 +1286,7 @@ def write_batch_script(
         for s in [
             'copy_files',
             'mcs_sampler',
+            'climateprep',            
             'hydcf',
             'h2_storage',
             'calc_financial_inputs',
@@ -1294,7 +1295,6 @@ def write_batch_script(
             'writesupplycurves',
             'writedrshift',
             'plantcostprep',
-            'climateprep',
             'hourly_load',
             'recf',
             'forecast',
