@@ -3040,7 +3040,7 @@ However, the ReEDS offshore wind mandate for Maryland already captures this requ
 
 Finally, voluntary renewable energy credits are also represented in ReEDS.
 Only renewable energy technologies are allowed to supply voluntary RECs, and Canadian imports are not allowed.
-The voluntary REC requirement is based on the observed amount of voluntary RECs from {cite}`heeterStatusTrendsVoluntary2021`, and the requirement is assumed to grow by the smallest amount that has been observed year-over-year (0.1624% in absolute terms).
+The voluntary REC requirement is based on the observed amount of voluntary RECs from {cite}`heeterStatusTrendsVoluntary2021`, and the requirement is assumed to grow by the smallest amount that has been observed year-over-year (0.1208% in absolute terms).
 The voluntary requirement includes an alternative compliance payment of \$10/MWh (in 2004\$).
 
 ```{table} Cumulative Offshore Wind Capacity (MW) Mandated in ReEDS
