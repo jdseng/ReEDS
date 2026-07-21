@@ -3063,7 +3063,7 @@ The voluntary requirement includes an alternative compliance payment of \$10/MWh
 
 ### Clean Energy Standards
 
-As of June 2026, 16 states had clean energy standards (see {numref}`clean-energy-req`).
+As of June 2026, 16 states had clean energy standards (see {numref}`clean-energy-req`, which shows the modeled CES values).
 CES values are effective values[^ref56] and are taken from {cite}`barboseStateRenewablesPortfolio2026`.
 These CESs are in effect generalized versions of RPSs; their model representations are very similar, with technology eligibility being the primary difference.
 
