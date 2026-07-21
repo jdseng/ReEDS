@@ -3092,7 +3092,7 @@ The modeled CES for Massachusetts begins at 16% in 2018 and increases to 80% by 
 This multiplier shortens the cost recovery period of the plant.
 For example, when evaluating whether to build a gas-CC unit 5 years before the scheduled phaseout, the financial multiplier for gas-CC includes a 5-year cost recovery period.
 
-```{table} Clean Energy Requirement as a Percentage of In-State Sales
+```{table} Modeled Clean Energy Requirement as a Percentage of In-State Sales
 :name: clean-energy-req
 
 | **State** | **2020** | **2025** | **2030** | **2035** | **2040** | **2045** | **2050** |
