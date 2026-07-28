@@ -2,7 +2,7 @@
 ignore,1,,0
 GSw_Region,,cendiv/Pacific,
 endyear,,2032,
-yearset,,,
+yearset,,,2010..2025..5_2026..2035..1
 GSw_ZoneSet,,,z54
 GSw_GasCurve,,2,1
 GSw_HourlyChunkLengthRep,,,4
