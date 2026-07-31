@@ -1,15 +1,16 @@
-,Default Value,Pacific,USA_fast
-ignore,1,,0
-GSw_Region,,cendiv/Pacific,
-endyear,,2032,2035
-yearset,,,2010..2025..5_2026..2035..1
-GSw_ZoneSet,,,z54
-GSw_GasCurve,,2,1
-GSw_HourlyChunkLengthRep,,,4
-GSw_HourlyChunkLengthStress,,,4
-GSw_StartCost,,,0
-GSw_H2,,,0
-GSw_H2_PTC,,,0
-GSw_H2Combustion,,,0
-pras_samples,,,10
-GSw_CCS,,,0
+,Default Value,Pacific,USA_fast,USA_fast_itc
+ignore,1,,,
+GSw_Region,,cendiv/Pacific,,
+endyear,,2032,2035,2035
+yearset,,,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1
+GSw_ZoneSet,,,z54,z54
+GSw_GasCurve,,2,1,1
+GSw_HourlyChunkLengthRep,,,4,4
+GSw_HourlyChunkLengthStress,,,4,4
+GSw_StartCost,,,0,0
+GSw_H2,,,0,0
+GSw_H2_PTC,,,0,0
+GSw_H2Combustion,,,0,0
+pras_samples,,,10,10
+GSw_CCS,,,0,0
+incentives_suffix,,,,obbba_seia1
