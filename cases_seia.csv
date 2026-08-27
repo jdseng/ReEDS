@@ -1,17 +1,17 @@
-,Default Value,Pacific,USA_fast,USA_fast_itc,USA_fast_itc2,USA_fast_itc3,USA_fast_itc4,USA_fast_itc5,USA_fast_itc6,USA_fast_itc7,USA_fast_itc8,USA_fast_itc9
-ignore,1,,,,,,,,,,,
-GSw_Region,,cendiv/Pacific,,,,,,,,,,
-endyear,,2032,2035,2035,2035,2035,2035,2035,2035,2035,2035,2035
-yearset,,,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1
-GSw_ZoneSet,,,z54,z54,z54,z54,z54,z54,z54,z54,z54,z54
-GSw_GasCurve,,2,,,,,,,,,,
-GSw_HourlyChunkLengthRep,,,,,,,,,,,,
-GSw_HourlyChunkLengthStress,,,,,,,,,,,,
-GSw_StartCost,,,,,,,,,,,,
-GSw_H2,,,0,0,0,0,0,0,0,0,0,0
-GSw_H2_PTC,,,0,0,0,0,0,0,0,0,0,0
-GSw_H2Combustion,,,0,0,0,0,0,0,0,0,0,0
-pras_samples,,,,,,,,,,,,
-GSw_CCS,,,0,0,0,0,0,0,0,0,0,0
-GSw_Clean_Air_Act,,,,,,,,0,0,,0,
-incentives_suffix,,,,obbba_seia1,obbba_seia2,obbba_seia3,obbba_seia4,obbba_seia2,obbba_seia4,obbba_seia5,obbba_seia5,obbba_seia6
+,Default Value,Pacific,USA_fast,USA_fast_itc,USA_fast_itc2,USA_fast_itc3,USA_fast_itc4,USA_fast_itc5,USA_fast_itc6,USA_fast_itc7,USA_fast_itc8,USA_fast_itc9,USA_fast_itc10,USA_fast_itc11,USA_fast_itc12
+ignore,1,,,,,,,,,,,,,,
+GSw_Region,,cendiv/Pacific,,,,,,,,,,,,,
+endyear,,2032,2035,2035,2035,2035,2035,2035,2035,2035,2035,2035,2035,2035,2035
+yearset,,,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2011..2025..5_2026..2035..1,2011..2025..5_2026..2035..1,2011..2025..5_2026..2035..1
+GSw_ZoneSet,,,z54,z54,z54,z54,z54,z54,z54,z54,z54,z54,z54,z54,z54
+GSw_GasCurve,,2,,,,,,,,,,,,,
+GSw_HourlyChunkLengthRep,,,,,,,,,,,,,,,
+GSw_HourlyChunkLengthStress,,,,,,,,,,,,,,,
+GSw_StartCost,,,,,,,,,,,,,,,
+GSw_H2,,,0,0,0,0,0,0,0,0,0,0,0,0,0
+GSw_H2_PTC,,,0,0,0,0,0,0,0,0,0,0,0,0,0
+GSw_H2Combustion,,,0,0,0,0,0,0,0,0,0,0,0,0,0
+pras_samples,,,,,,,,,,,,,,,
+GSw_CCS,,,0,0,0,0,0,0,0,0,0,0,0,0,0
+GSw_Clean_Air_Act,,,,,,,,0,0,,0,,0,,0
+incentives_suffix,,,,obbba_seia1,obbba_seia2,obbba_seia3,obbba_seia4,obbba_seia2,obbba_seia4,obbba_seia5,obbba_seia5,obbba_seia6,obbba_seia6,obbba_seia7,obbba_seia7
