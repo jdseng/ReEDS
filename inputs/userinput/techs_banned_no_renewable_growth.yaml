@@ -1,0 +1,291 @@
+# Note the only allowed regional scopes / nested keys are 'st' and 'county'.
+Coal-IGCC:
+  st:
+  - OR
+  - VT
+CoalOldScr:
+  st:
+  - OR
+  - VT
+CoalOldUns:
+  st:
+  - OR
+  - VT
+CofireNew:
+  st:
+  - OR
+  - VT
+CofireOld:
+  st:
+  - OR
+  - VT
+Gas-CC:
+  st:
+  - OR
+  - VT
+Gas-CC_H_1x1:
+  st:
+  - OR
+  - VT
+Gas-CC_H_2x1:
+  st:
+  - OR
+  - VT
+Gas-CC-CCS_max:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CC-CCS_mod:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CC_H_1x1-CCS_max:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CC_H_1x1-CCS_mod:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CC_H_2x1-CCS_max:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CC_H_2x1-CCS_mod:
+  st:
+  - NY
+  - OR
+  - VT
+Gas-CT:
+  st:
+  - OR
+  - VT
+Gas-CT_aero:
+  st:
+  - OR
+  - VT
+ng-fuel-cell:
+  st:
+  - OR
+  - VT
+beccs_max:
+  st:
+  - NY
+beccs_mod:
+  st:
+  - NY
+biopower:
+  st:
+  - NY
+coal-CCS_max:
+  st:
+  - NY
+  - OR
+  - VT
+coal-CCS_mod:
+  st:
+  - NY
+  - OR
+  - VT
+coal-new:
+  st:
+  - OR
+  - VT
+geothermal:
+  st:
+  - NY
+lfill-gas:
+  st:
+  - NY
+nuclear:
+  # source: https://www.ncsl.org/environment-and-natural-resources/states-restrictions-on-new-nuclear-power-facility-construction
+  county:
+  - 36059
+  - 36103
+  st:
+  - OR
+  - CA
+  - MN
+  - VT
+  - MA
+  - RI
+  - ME
+o-g-s:
+  st:
+  - OR
+
+# Disable endogenous growth in all active wind, utility-PV, and PV-battery classes.
+# The regional ban is applied to investments; existing and prescribed capacity remain available.
+upv_1:
+  st: &all_states
+  - AL
+  - AR
+  - AZ
+  - CA
+  - CO
+  - CT
+  - DE
+  - FL
+  - GA
+  - IA
+  - ID
+  - IL
+  - IN
+  - KS
+  - KY
+  - LA
+  - MA
+  - MD
+  - ME
+  - MI
+  - MN
+  - MO
+  - MS
+  - MT
+  - NC
+  - ND
+  - NE
+  - NH
+  - NJ
+  - NM
+  - NV
+  - NY
+  - OH
+  - OK
+  - OR
+  - PA
+  - RI
+  - SC
+  - SD
+  - TN
+  - TX
+  - UT
+  - VA
+  - VT
+  - WA
+  - WI
+  - WV
+  - WY
+upv_2:
+  st: *all_states
+upv_3:
+  st: *all_states
+upv_4:
+  st: *all_states
+upv_5:
+  st: *all_states
+upv_6:
+  st: *all_states
+upv_7:
+  st: *all_states
+upv_8:
+  st: *all_states
+upv_9:
+  st: *all_states
+upv_10:
+  st: *all_states
+pvb1_1:
+  st: *all_states
+pvb1_2:
+  st: *all_states
+pvb1_3:
+  st: *all_states
+pvb1_4:
+  st: *all_states
+pvb1_5:
+  st: *all_states
+pvb1_6:
+  st: *all_states
+pvb1_7:
+  st: *all_states
+pvb1_8:
+  st: *all_states
+pvb1_9:
+  st: *all_states
+pvb1_10:
+  st: *all_states
+pvb2_1:
+  st: *all_states
+pvb2_2:
+  st: *all_states
+pvb2_3:
+  st: *all_states
+pvb2_4:
+  st: *all_states
+pvb2_5:
+  st: *all_states
+pvb2_6:
+  st: *all_states
+pvb2_7:
+  st: *all_states
+pvb2_8:
+  st: *all_states
+pvb2_9:
+  st: *all_states
+pvb2_10:
+  st: *all_states
+pvb3_1:
+  st: *all_states
+pvb3_2:
+  st: *all_states
+pvb3_3:
+  st: *all_states
+pvb3_4:
+  st: *all_states
+pvb3_5:
+  st: *all_states
+pvb3_6:
+  st: *all_states
+pvb3_7:
+  st: *all_states
+pvb3_8:
+  st: *all_states
+pvb3_9:
+  st: *all_states
+pvb3_10:
+  st: *all_states
+wind-ofs_1:
+  st: *all_states
+wind-ofs_2:
+  st: *all_states
+wind-ofs_3:
+  st: *all_states
+wind-ofs_4:
+  st: *all_states
+wind-ofs_5:
+  st: *all_states
+wind-ofs_6:
+  st: *all_states
+wind-ofs_7:
+  st: *all_states
+wind-ofs_8:
+  st: *all_states
+wind-ofs_9:
+  st: *all_states
+wind-ofs_10:
+  st: *all_states
+wind-ons_1:
+  st: *all_states
+wind-ons_2:
+  st: *all_states
+wind-ons_3:
+  st: *all_states
+wind-ons_4:
+  st: *all_states
+wind-ons_5:
+  st: *all_states
+wind-ons_6:
+  st: *all_states
+wind-ons_7:
+  st: *all_states
+wind-ons_8:
+  st: *all_states
+wind-ons_9:
+  st: *all_states
+wind-ons_10:
+  st: *all_states
