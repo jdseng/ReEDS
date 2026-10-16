@@ -6,6 +6,8 @@ yearset,,,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_
 GSw_ZoneSet,,,z54,z54,z54
 GSw_TransRestrict,,,,,r
 GSw_StateRPS,,,,,0
+GSw_StateCap,,,,,0
+GSw_PVB,,,,,1
 GSw_GasCurve,,2,,,
 GSw_HourlyChunkLengthRep,,,,,
 GSw_HourlyChunkLengthStress,,,,,
