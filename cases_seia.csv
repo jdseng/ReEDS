@@ -7,7 +7,7 @@ GSw_ZoneSet,,,z54,z54,z54
 GSw_TransRestrict,,,,,r
 GSw_StateRPS,,,,,0
 GSw_StateCap,,,,,0
-GSw_PVB,,,,,1
+GSw_PVB,,,,,0
 GSw_GasCurve,,2,,,
 GSw_HourlyChunkLengthRep,,,,,
 GSw_HourlyChunkLengthStress,,,,,

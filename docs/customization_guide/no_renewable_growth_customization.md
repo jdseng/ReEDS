@@ -43,8 +43,9 @@ This makes `tech_banned` appropriate for an endogenous-investment counterfactual
 Do **not** use these as the primary mechanism:
 
 - `GSw_OfsWind=0`: this invokes the global `ban(i)` mechanism and removes offshore wind from model consideration rather than only blocking new investment.
-- `GSw_PVB=0`: this disables the coupled PVB technology representation and causes input processing to represent existing `pvb_pv` and `pvb_battery` capacity as standalone UPV and `battery_li` instead. Use `GSw_PVB=1` if existing hybrid PVB assets must remain modeled as PVB.
 - Siting switches such as `GSw_SitingUPV=limited`: these change resource availability; they do not disable endogenous investment.
+
+PVB is a special case. `GSw_PVB=0` disables the coupled PVB investment/dispatch representation but does not delete existing PVB capacity: input processing represents `pvb_pv` as UPV and `pvb_battery` as `battery_li`. That is the selected treatment for this counterfactual because the requirement is to retain the physical capacity, not coupled PVB dispatch. Use `GSw_PVB=1` only if coupled PVB operation must be represented.
 
 ## Procedure
 
@@ -168,7 +169,7 @@ Because this customization uses a dedicated git branch, no `file_replacements` e
 Keep the following switches consistent with the base scenario:
 
 - Keep `GSw_OfsWind=1` if existing or prescribed offshore wind must remain available.
-- Keep `GSw_PVB=1` if existing PVB must remain available.
+- Use `GSw_PVB=0` when existing PVB needs only its physical PV and battery capacity retained; use `GSw_PVB=1` only when coupled PVB dispatch must be represented.
 - Keep `GSw_SitingUPV`, `GSw_SitingWindOns`, and `GSw_SitingWindOfs` at the intended base-case values.
 - Do not change `techs_suffix` unless the counterfactual intentionally uses a different technology set.
 - If `GSw_CSP` is nonzero, include active CSP technologies in the ban YAML.
@@ -177,12 +178,12 @@ Example case-file fields for the branch-local counterfactual:
 
 ```csv
 GSw_OfsWind,,,1
-GSw_PVB,,,1
+GSw_PVB,,,0
 ```
 
 Use the existing cases-file column layout; the example above shows only the relevant values.
 
-For `USA_fast_no_re_2026`, `GSw_PVB=1` is required because the counterfactual is intended to retain existing PVB as hybrid PVB. With `GSw_PVB=0`, `writecapdat.py` maps `pvb_pv` to `upv` and `pvb_battery` to `battery_li`, which preserves capacity in an aggregated component sense but does not preserve the coupled PVB representation.
+For `USA_fast_no_re_2026`, the selected treatment is `GSw_PVB=0`. This retains existing PVB's physical capacity by mapping `pvb_pv` to `upv` and `pvb_battery` to `battery_li`, while disabling coupled PVB as an investment/dispatch technology. `GSw_PVB=1` should not be used for this counterfactual unless coupled PVB operation is explicitly required; that setting currently requires `inputs_case/recf_upv.h5`, which is not generated or downloaded by the present input-processing path.
 
 ### 5. Run input processing first
 
@@ -229,8 +230,8 @@ Do not reuse an old case directory without checking its generated inputs. Case d
 - [ ] The custom runfiles file changes only the `techs_banned.csv` source path.
 - [ ] The custom YAML uses only `st` and/or `county` scopes.
 - [ ] The active technology list was derived from `techs_{techs_suffix}.csv`.
-- [ ] The case uses `GSw_PVB=1` when existing PVB must remain modeled as hybrid PVB.
-- [ ] PVB classes match `GSw_PVB_Types`.
+- [ ] The case uses `GSw_PVB=0` when existing PVB is retained only as decomposed PV and battery capacity.
+- [ ] PVB classes match `GSw_PVB_Types` if `GSw_PVB` is enabled for a different scenario.
 - [ ] CSP classes are included when `GSw_CSP` is enabled.
 - [ ] All model regions in the selected case are covered.
 - [ ] `inputs_case/techs_banned.csv` exists and has the expected dimensions.
@@ -238,7 +239,7 @@ Do not reuse an old case directory without checking its generated inputs. Case d
 ### Model-result validation
 
 - [ ] Existing wind and solar capacity remains available.
-- [ ] Existing PVB remains modeled as hybrid PVB rather than being split into standalone UPV and `battery_li`.
+- [ ] Existing PVB's PV component remains represented as UPV and its battery component as `battery_li`.
 - [ ] Prescribed onshore and offshore wind builds remain present where intended.
 - [ ] No unprescribed endogenous investments occur for wind-ons, wind-ofs, UPV, or PVB.
 - [ ] No endogenous CSP investments occur when CSP is included in the counterfactual ban list.
@@ -532,6 +533,31 @@ For `USA_fast_no_re_2026`, the selected permanent treatment is:
 ```text
 GSw_StateCap = 0
 ```
+
+## PVB input-processing check
+
+For `USA_fast_no_re_2026`, the selected PVB treatment is:
+
+```text
+GSw_PVB = 0
+```
+
+This does not delete existing PVB capacity. During `writecapdat.py`, existing
+`pvb_pv` records are represented as UPV and existing `pvb_battery` records as
+`battery_li`. That is consistent with retaining the physical PV and battery
+capacity while disabling PVB as a coupled investment/dispatch technology.
+
+A temporary input-only check on 2026-10-16 confirmed the distinction. With the
+prior `GSw_PVB=0` inputs, `prescribed_rsc.csv` contained no `pvb` records and
+`prescribed_nonRSC.csv` contained a larger standalone `battery_li` total. With a
+temporary `GSw_PVB=1` input check, `prescribed_rsc.csv` contained 97 `pvb`
+records totaling 34,891.6168, while UPV and standalone battery totals were lower.
+That input check then stopped in `recf.py` because `inputs_case/recf_upv.h5` was
+missing. The file is not listed in `inputs/remote_files.csv`, is not produced by
+`recf.py`, and is not present in the repository or AWS checkout. Therefore,
+`GSw_PVB=1` is not a configuration-only change in this revision; it requires an
+upstream input-processing correction or a defensible generated `recf_upv.h5`
+input.
 
 ## Restart-based feasibility diagnostics
 
