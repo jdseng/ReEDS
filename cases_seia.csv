@@ -1,24 +1,25 @@
-,Default Value,Pacific,USA_fast,USA_fast_itc,USA_fast_no_re_2026,USA_fast_no_re_2026_strict,USA_fast_no_re_2026_strict_noli,USA_fast_notrans
-ignore,1,,,,,,,
-GSw_Region,,cendiv/Pacific,,,,,,
-endyear,,2032,2035,2035,2035,2035,2035,2035
-yearset,,,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1
-GSw_ZoneSet,,,z54,z54,z54,z54,z54,z54
-GSw_TransRestrict,,,,,r,r,r,r
-GSw_StateRPS,,,,,0,0,0,
-GSw_StateCap,,,,,0,0,0,
-GSw_PVB,,,,,0,0,0,
-GSw_BatteryMandate,,,,,,,0,
-file_replacements,,,,,,reeds/core/setup/a_createmodel.gms << inputs/userinput/a_createmodel_no_extra_prescrip.gms,reeds/core/setup/a_createmodel.gms << inputs/userinput/a_createmodel_no_extra_prescrip_noli.gms,
-GSw_GasCurve,,2,,,,,,
-GSw_HourlyChunkLengthRep,,,,,,,,
-GSw_HourlyChunkLengthStress,,,,,,,,
-GSw_StartCost,,,,,,,,
-GSw_H2,,,0,0,0,0,0,0
-GSw_H2_PTC,,,0,0,0,0,0,0
-GSw_H2Combustion,,,0,0,0,0,0,0
-pras_samples,,,,,,,,
-GSw_CCS,,,0,0,0,0,0,0
-GSw_Clean_Air_Act,,,,0,0,0,0,0
-incentives_suffix,,,,obbba_seia1,obbba_seia2,obbba_seia2,obbba_seia2,obbba_seia2
-techs_banned_src,,,,,userinput/techs_banned_no_renewable_growth,userinput/techs_banned_no_renewable_growth,userinput/techs_banned_no_renewable_growth,
+,Default Value,Pacific,USA_fast,USA_fast_itc,USA_fast_no_re_2026,USA_fast_no_re_2026_strict,USA_fast_no_re_2026_strict_noli,USA_fast_notrans,USA_fast_gas_FOM25
+ignore,1,,,,,,,,
+GSw_Region,,cendiv/Pacific,,,,,,,
+endyear,,2032,2035,2035,2035,2035,2035,2035,2035
+yearset,,,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1,2010..2025..5_2026..2035..1
+GSw_ZoneSet,,,z54,z54,z54,z54,z54,z54,z54
+GSw_TransRestrict,,,,,r,r,r,r,
+GSw_StateRPS,,,,,0,0,0,,
+GSw_StateCap,,,,,0,0,0,,
+GSw_PVB,,,,,0,0,0,,
+GSw_BatteryMandate,,,,,,,0,,
+file_replacements,,,,,,reeds/core/setup/a_createmodel.gms << inputs/userinput/a_createmodel_no_extra_prescrip.gms,reeds/core/setup/a_createmodel.gms << inputs/userinput/a_createmodel_no_extra_prescrip_noli.gms,,
+GSw_GasCurve,,2,,,,,,,
+GSw_HourlyChunkLengthRep,,,,,,,,,
+GSw_HourlyChunkLengthStress,,,,,,,,,
+GSw_StartCost,,,,,,,,,
+GSw_H2,,,0,0,0,0,0,0,0
+GSw_H2_PTC,,,0,0,0,0,0,0,0
+GSw_H2Combustion,,,0,0,0,0,0,0,0
+pras_samples,,,,,,,,,
+GSw_CCS,,,0,0,0,0,0,0,0
+GSw_Clean_Air_Act,,,,0,0,0,0,0,0
+incentives_suffix,,,,obbba_seia1,obbba_seia2,obbba_seia2,obbba_seia2,obbba_seia2,obbba_seia2
+techs_banned_src,,,,,userinput/techs_banned_no_renewable_growth,userinput/techs_banned_no_renewable_growth,userinput/techs_banned_no_renewable_growth,,
+plantchar_gas,,,,,,,,,gas_fom25
